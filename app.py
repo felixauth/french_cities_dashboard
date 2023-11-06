@@ -22,11 +22,11 @@ def load_data(file_path:str):
 def graph_housing(data, city):
     data_format = pd.melt(
                           data[["LIB_MOD","proportion_city","proportion_national"]].rename(columns={"proportion_city": city,
-                                                                                                    "proportion_national": "France entière"}), 
+                                                                                                    "proportion_national": "France entière"}),
                           id_vars = ["LIB_MOD"], value_vars = [city,"France entière"]
                           )
     fig, ax = plt.subplots(1, figsize=(11, 6))
-    ax = sns.barplot(data_format, x="value", y ="LIB_MOD", hue="variable", palette="mako", orient='h')
+    ax = sns.barplot(data = data_format, x="value", y ="LIB_MOD", hue="variable", palette="mako", orient='h')
     sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
     ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     score_percent_city = round(data_format.query("variable == @city")["value"] * 100,1).astype(str) + "%"
@@ -45,10 +45,10 @@ def dvf_preproc(dvf_clean_df):
     Returns a dataframe with real estate transactions for houses and apartments, cleaned of outliers and duplicates.
     """
     dvf_house_apt = dvf_clean_df.loc[
-        (dvf_clean_df["Type local"].isin(["Maison", "Appartement"])) & 
+        (dvf_clean_df["Type local"].isin(["Maison", "Appartement"])) &
         (dvf_clean_df["Nature mutation"] == "Vente")
         ].reset_index(drop=True)
-    
+
     dvf_preproc_unique = dvf_house_apt.drop_duplicates(subset=["Date mutation","Valeur fonciere", "No voie", "Voie"])
     lower_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.1)
     upper_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.9)
@@ -65,7 +65,7 @@ def dvf_per_city(dvf_preproc):
     return dvf_house_apt_avg
 
 def data_meteo_national_avg(data_meteo_preproc_df):
-    
+
     data_nat = data_meteo_preproc_df.groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
 
     return data_nat
@@ -78,10 +78,10 @@ def wheather_station_list(data_meteo_preproc_df):
     return stations_coord
 
 def find_closest_station(station_df, coordinates: tuple):
-    
+
     closest_station = station_df.copy()
     closest_station["distance"] = closest_station.apply(lambda x: geopy.distance.geodesic(x["coord"], coordinates).km, axis=1)
-    
+
     return closest_station[closest_station["distance"] == closest_station["distance"].min()].loc[:,"numer_sta"].values[0]
 
 
@@ -98,25 +98,25 @@ def temp_by_season(data_meteo_city):
                 "automne",
                 "hiver"
         )))
-    
+
     df_grouped = df.groupby(["Saison"])["temperature_C"].mean()
 
     return df_grouped
 
 @st.cache_data
 def data_meteo_national_avg(data_meteo_preproc_df):
-    
+
     data_nat = data_meteo_preproc_df.dropna(subset=["precipitations_3h","humidite_%","temperature_C"]).groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
 
     return data_nat
 
 def pluvio_moyenne(data_preproc):
     df = data_preproc.copy().reset_index()
-    df["month_name"] = df["date_clean"].dt.month_name(locale = 'English')
+    df["month_name"] = df["date_clean"].dt.month_name("fr_FR.utf8")
     df["year_month"] = df["date_clean"].dt.to_period("M")
     #sum of rain per month
     df_sum_month = df.groupby(["year_month", "month_name"], as_index=False)["precipitations_3h"].sum()
-    
+
     #average of rain per month
     df_sum_month["month"] = df_sum_month["year_month"].dt.month
     df_avg_month = df_sum_month.groupby(["month_name","month"], as_index=False)["precipitations_3h"].mean().sort_values(by=["month"]).reset_index(drop=True)
@@ -125,7 +125,7 @@ def pluvio_moyenne(data_preproc):
 def graph_pluvio(data_pluvio, city):
     data_format = pd.melt(data_pluvio.reset_index(), id_vars = ["month_name"], value_vars = [city,"Moy. villes françaises"])
     fig, ax = plt.subplots(1, figsize=(14, 4))
-    ax = sns.barplot(data_format, x="month_name", y ="value", hue="variable", palette="mako")
+    ax = sns.barplot(data = data_format, x="month_name", y ="value", hue="variable", palette="mako")
     sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
     ax.legend().set_title(None)
     ax.set_ylabel("mm")
@@ -153,7 +153,7 @@ with title_text:
 with title_image_next:
     image_france = Image.open('processed_data/logo-france-2.png')
     st.image(image_france, width=120)
-     
+
 
 folder = "processed_data"
 insee_data_file = os.path.join(folder,"2020_insee_data_population.parquet.gzip")
@@ -185,7 +185,7 @@ city = st.selectbox(
 launch_button = st.button("Afficher les données", type="primary")
 
 if launch_button:
-    
+
     #################################### LOADING DATA #######################################################
 
     #Geographic data on selected city
@@ -278,7 +278,7 @@ if launch_button:
     #Graph tour 1
     try:
         fig1, ax1 = plt.subplots(1, figsize=(6, 3))
-        ax1 = sns.barplot(pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+        ax1 = sns.barplot(data = pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
         ax1.set_ylabel("")
         ax1.set_xlabel("")
         sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
@@ -292,7 +292,7 @@ if launch_button:
     #Graph tour 2
     try:
         fig2, ax2 = plt.subplots(1, figsize=(6, 3))
-        ax2 = sns.barplot(pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+        ax2 = sns.barplot(data = pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
         ax2.set_ylabel("")
         ax2.set_xlabel("")
         sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
@@ -307,7 +307,7 @@ if launch_button:
     # REAL ESTATE DATA
     dvf_preproc_df = dvf_preproc(dvf_2023)
     dvf_avg = dvf_per_city(dvf_preproc_df)
-    
+
     try:
         apt_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Appartement","Valeur fonc / surface habitable"].values[0]
         apt_nb_transac = dvf_preproc_df["Type local"].value_counts()["Appartement"]
@@ -332,7 +332,7 @@ if launch_button:
     pluvio_fig = graph_pluvio(pluvio_df, city)
 
     #################################### DISPLAYING DATA #######################################################
-    
+
     st.map(pd.DataFrame({"lat":city_lat, "lon":city_long}, index=[0]))
 
     st.markdown("""___""")
@@ -355,7 +355,7 @@ if launch_button:
     st.write(pluvio_fig)
 
     st.markdown("""___""")
-    
+
     st.markdown("*Source:* **INSEE / 2020**")
     total1, total2, total3=st.columns(3,gap='large')
     with total1:
@@ -368,7 +368,7 @@ if launch_button:
                 st.metric(label=metric_label,value=missing_value_message)
             else:
                 st.metric(label=metric_label,value=f"{poverty_rate:,.0f} %")
-            st.text(f'France entière: {poverty_rate_median:,.0f} %')    
+            st.text(f'France entière: {poverty_rate_median:,.0f} %')
     with total3:
             st.info('Taux de chômage',icon="👔")
             metric_label = "Nb chômeurs / Population active"
@@ -391,7 +391,7 @@ if launch_button:
             st.info("Part d'immigrés",icon="🌏")
             st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
             st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
-    
+
     total7, total8=st.columns(2,gap='large')
     with total7:
         st.info('Age du référent du ménage',icon="👴🏼")
@@ -399,7 +399,7 @@ if launch_button:
     with total8:
         st.info('Années de construction des logements',icon="🏗️")
         st.write(fig_constr_period)
-        
+
     total9, total10=st.columns(2,gap='large')
     with total9:
         st.info('Nb de pièces par appartement',icon="🛏️")
@@ -410,7 +410,7 @@ if launch_button:
 
     st.markdown("""---""")
     st.subheader("Résultat aux élections municipales de 2020")
-    
+
     item3, item4 = st.columns((1,4))
     with item3:
         image = Image.open('processed_data/interpro_Maire.png')
@@ -422,7 +422,7 @@ if launch_button:
         st.caption(f"**Liste :** {elected_candidate_list}")
 
     st.subheader("Résultat aux élections présidentielles de 2022")
-    
+
     item5, item6 = st.columns(2,gap='large')
     with item5:
         st.markdown("#### Premier tour")
@@ -452,6 +452,10 @@ if launch_button:
     # if (launch_button) & (on) :
 
     st.write("##")
+
+    # on = st.toggle('Détail des transactions')
+    # if on:
+
     st.markdown("**Détail des transactions du premier semestre 2023**")
     dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
     st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
