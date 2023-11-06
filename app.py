@@ -65,7 +65,7 @@ def dvf_per_city(dvf_preproc):
 
 def data_meteo_national_avg(data_meteo_preproc_df):
     
-    data_nat = data_meteo_preproc_df.groupby("date_clean")[["precipitations_12h","humidite_%","temperature_C"]].mean()
+    data_nat = data_meteo_preproc_df.groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
 
     return data_nat
 
@@ -105,30 +105,31 @@ def temp_by_season(data_meteo_city):
 @st.cache_data
 def data_meteo_national_avg(data_meteo_preproc_df):
     
-    data_nat = data_meteo_preproc_df.dropna(subset=["precipitations_12h","humidite_%","temperature_C"]).groupby("date_clean")[["precipitations_12h","humidite_%","temperature_C"]].mean()
+    data_nat = data_meteo_preproc_df.dropna(subset=["precipitations_3h","humidite_%","temperature_C"]).groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
 
     return data_nat
 
-def graph_pluvio(pluvio, city):
-    # Create figure object
-    fig = go.Figure()
-
-    # Add trace for col A (solid line)
-    fig.add_trace(go.Scatter(x=pluvio.index, y=pluvio[city], mode="lines", name=city))
-
-    # Add trace for col B (dot line)
-    fig.add_trace(go.Scatter(x=pluvio.index, y=pluvio["Moyenne France"], mode="lines", name="Moyenne France", line=dict(dash="dot", width=0.5, color='red')))
-    fig.update_layout(margin={"t":0},
-                        legend=dict(
-                            title=None,
-                            yanchor="top",
-                            y = 0.95,
-                            xanchor="right",
-                            x=0.95),
-                            width = 1800)
+def pluvio_moyenne(data_preproc):
+    df = data_preproc.copy().reset_index()
+    df["month_name"] = df["date_clean"].dt.month_name(locale = 'French')
+    df["year_month"] = df["date_clean"].dt.to_period("M")
+    #sum of rain per month
+    df_sum_month = df.groupby(["year_month", "month_name"], as_index=False)["precipitations_3h"].sum()
     
-    fig.update_yaxes(title="mm")
-    fig.update_xaxes(title="")
+    #average of rain per month
+    df_sum_month["month"] = df_sum_month["year_month"].dt.month
+    df_avg_month = df_sum_month.groupby(["month_name","month"], as_index=False)["precipitations_3h"].mean().sort_values(by=["month"]).reset_index(drop=True)
+    return df_avg_month
+
+def graph_pluvio(data_pluvio, city):
+    data_format = pd.melt(data_pluvio.reset_index(), id_vars = ["month_name"], value_vars = [city,"Moy. villes françaises"])
+    fig, ax = plt.subplots(1, figsize=(14, 4))
+    ax = sns.barplot(data_format, x="month_name", y ="value", hue="variable", palette="mako")
+    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+    ax.legend().set_title(None)
+    ax.set_ylabel("mm")
+    ax.set_xlabel(None)
+    sns.set_style("darkgrid")
     return fig
 
 #################################### WELCOME PAGE #######################################################
@@ -158,7 +159,7 @@ insee_data_file = rf"{folder}\2020_insee_data_population.parquet.gzip"
 insee_data_sum_stat = rf"{folder}\2020_insee_data_population_sum_stat.parquet.gzip"
 cityhall_elec_data_file = rf"{folder}\2020_gouv_data_city_hall_elections.parquet.gzip"
 pres_elec_data_file = rf"{folder}\2022_gouv_data_pres_elections.parquet.gzip"
-insee_city_name_id = "cities_insee_id.parquet.gzip"
+insee_city_name_id = rf"{folder}\cities_insee_id.parquet.gzip"
 insee_housing_const = rf"{folder}\2020_housing_constr_period.parquet.gzip"
 insee_hlm = rf"{folder}\2020_housing_hlm.parquet.gzip"
 insee_immigration = rf"{folder}\2020_housing_immigration.parquet.gzip"
@@ -317,8 +318,11 @@ if launch_button:
     data_meteo_city = data_meteo_preproc_df.query("numer_sta == @closest_station").reset_index(drop=True)
     temp_city = temp_by_season(data_meteo_city)
     data_meteo_nat = data_meteo_national_avg(data_meteo_preproc_df)
-    pluvio = data_meteo_nat[["precipitations_12h"]].join(data_meteo_city.set_index(["date_clean"])["precipitations_12h"], rsuffix='_city').rename(columns={"precipitations_12h":"Moyenne France", "precipitations_12h_city":city})
-    pluvio_fig = graph_pluvio(pluvio, city)
+    pluvio_avg_city = pluvio_moyenne(data_meteo_city)
+    pluvio_avg_nat = pluvio_moyenne(data_meteo_nat)
+    pluvio_df = pd.merge(pluvio_avg_city, pluvio_avg_nat, how="left", on=["month","month_name"], suffixes=('_city', '_nat'))\
+                        .rename(columns={"precipitations_3h_city": city,"precipitations_3h_nat":"Moy. villes françaises"})
+    pluvio_fig = graph_pluvio(pluvio_df, city)
 
     #################################### DISPLAYING DATA #######################################################
     
@@ -338,6 +342,7 @@ if launch_button:
     with temp4:
             st.metric(label="🌼 Printemps", value=f"{round(temp_city['printemps'], 1)} °C")
 
+    st.write("##")
     st.subheader("🌧️ Pluviométrie")
     st.caption("Moyenne 2020-2023")
     st.write(pluvio_fig)
