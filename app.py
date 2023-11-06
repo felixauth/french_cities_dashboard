@@ -145,15 +145,12 @@ st.set_page_config(
 
 folder = "processed_data"
 
-title_image, title_text, title_image_next = st.columns((1,4,1))
+title_image, title_text = st.columns((1,4))
 with title_image:
     image_france = Image.open('processed_data/logo-france-2.png')
     st.image(image_france, width=120)
 with title_text:
-    st.markdown('# *Les villes :blue[Françaises] en chiffres*')
-with title_image_next:
-    image_france = Image.open('processed_data/logo-france-2.png')
-    st.image(image_france, width=120)
+    st.markdown('# *Explorateur de villes :blue[françaises]*')
 
 
 folder = "processed_data"
@@ -174,13 +171,18 @@ wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
 
 insee_city_name_df = load_data(insee_city_name_id)
 
-list_cities = list(insee_city_name_df["LIBELLE_COM"].unique())
+list_cities = list(
+     insee_city_name_df[
+          ~insee_city_name_df["LIBELLE_COM"].isin(["Paris","Marseille","Lyon"])
+          ]["LIBELLE_COM"].unique()
+          )
 
 # Selecting the city
 city = st.selectbox(
     'Sélectionner la ville :',
     list_cities,
-    index=3
+    index=None,
+    placeholder="Sélectionner une ville dans la liste déroulante"
     )
 
 launch_button = st.button("Afficher les données", type="primary")
@@ -209,8 +211,6 @@ if launch_button:
     insee_hlm_data = pd.read_parquet(insee_hlm, filters = criteria)
     insee_immigration_data = pd.read_parquet(insee_immigration, filters = criteria)
     insee_owner_share_data = pd.read_parquet(insee_owner_share, filters = criteria)
-    insee_nb_rooms_data = pd.read_parquet(insee_nb_rooms, filters = criteria)
-    insee_constr_period = pd.read_parquet(insee_housing_const, filters = criteria)
     insee_age_pop = pd.read_parquet(insee_housing_age, filters = criteria)
     insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
     dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
@@ -266,12 +266,6 @@ if launch_button:
 
     #Graph age population
     fig_age_pop = graph_housing(insee_age_pop, city)
-
-    #Graph nb rooms
-    fig_nb_rooms = graph_housing(insee_nb_rooms_data, city)
-
-    #Graph constr_period
-    fig_constr_period = graph_housing(insee_constr_period, city)
 
     #Graph surface
     fig_housing_size = graph_housing(insee_surface, city)
@@ -398,14 +392,6 @@ if launch_button:
         st.info('Age du référent du ménage',icon="👴🏼")
         st.write(fig_age_pop)
     with total8:
-        st.info('Années de construction des logements',icon="🏗️")
-        st.write(fig_constr_period)
-
-    total9, total10=st.columns(2,gap='large')
-    with total9:
-        st.info('Nb de pièces par appartement',icon="🛏️")
-        st.write(fig_nb_rooms)
-    with total10:
         st.info('Taille des logements',icon="📐")
         st.write(fig_housing_size)
 
@@ -453,9 +439,6 @@ if launch_button:
     # if (launch_button) & (on) :
 
     st.write("##")
-
-    # on = st.toggle('Détail des transactions')
-    # if on:
 
     st.markdown("**Détail des transactions du premier semestre 2023**")
     dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
