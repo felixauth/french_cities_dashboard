@@ -11,6 +11,7 @@ import plotly.graph_objs as go
 import plotly.express as px
 import geopy.distance
 import os
+import calendar
 
 #################################### FUNCTIONS #######################################################
 
@@ -112,7 +113,7 @@ def data_meteo_national_avg(data_meteo_preproc_df):
 
 def pluvio_moyenne(data_preproc):
     df = data_preproc.copy().reset_index()
-    df["month_name"] = df["date_clean"].dt.month_name("fr_FR.utf8")
+    df["month_name"] = df["date_clean"].dt.month.apply(lambda x : calendar.month_name[x])   #dt.month_name("fr_FR.utf8")
     df["year_month"] = df["date_clean"].dt.to_period("M")
     #sum of rain per month
     df_sum_month = df.groupby(["year_month", "month_name"], as_index=False)["precipitations_3h"].sum()
