@@ -112,7 +112,7 @@ def data_meteo_national_avg(data_meteo_preproc_df):
 
 def pluvio_moyenne(data_preproc):
     df = data_preproc.copy().reset_index()
-    df["month_name"] = df["date_clean"].dt.month_name(locale = 'French')
+    df["month_name"] = df["date_clean"].dt.month_name(locale = 'English')
     df["year_month"] = df["date_clean"].dt.to_period("M")
     #sum of rain per month
     df_sum_month = df.groupby(["year_month", "month_name"], as_index=False)["precipitations_3h"].sum()
