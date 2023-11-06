@@ -174,7 +174,7 @@ insee_city_name_df = load_data(insee_city_name_id)
 list_cities = list(
      insee_city_name_df[
           ~insee_city_name_df["LIBELLE_COM"].isin(["Paris","Marseille","Lyon"])
-          ]["LIBELLE_COM"].unique()
+          ]["LIB_DEP"].unique()
           )
 
 # Selecting the city
@@ -192,10 +192,10 @@ if launch_button:
     #################################### LOADING DATA #######################################################
 
     #Geographic data on selected city
-    insee_city_id = insee_city_name_df[insee_city_name_df["LIBELLE_COM"] == city]["COM"].iloc[0].lstrip("0")
-    insee_city_dep_name = insee_city_name_df[insee_city_name_df["LIBELLE_COM"]== city]["LIBELLE_DEP"].iloc[0]
-    insee_city_dep_num = insee_city_name_df[insee_city_name_df["LIBELLE_COM"]== city]["DEP"].iloc[0]
-    insee_city_reg = insee_city_name_df[insee_city_name_df["LIBELLE_COM"]== city]["LIBELLE_REG"].iloc[0]
+    insee_city_id = insee_city_name_df[insee_city_name_df["LIB_DEP"] == city]["COM"].iloc[0].lstrip("0")
+    insee_city_dep_name = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_DEP"].iloc[0]
+    insee_city_dep_num = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["DEP"].iloc[0]
+    insee_city_reg = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_REG"].iloc[0]
 
     st.title(f"📌 {city}")
     st.markdown(f"🗺️ *{insee_city_dep_name} ({insee_city_dep_num}) - {insee_city_reg}*")
