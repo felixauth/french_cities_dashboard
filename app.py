@@ -276,26 +276,32 @@ if launch_button:
     fig_housing_size = graph_housing(insee_surface, city)
 
     #Graph tour 1
-    fig1, ax1 = plt.subplots(1, figsize=(6, 3))
-    ax1 = sns.barplot(pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
-    ax1.set_ylabel("")
-    ax1.set_xlabel("")
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-    ax1.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
-    label = f"{score_percent} %"
-    ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
+    try:
+        fig1, ax1 = plt.subplots(1, figsize=(6, 3))
+        ax1 = sns.barplot(pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+        ax1.set_ylabel("")
+        ax1.set_xlabel("")
+        sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+        ax1.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+        score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
+        label = f"{score_percent} %"
+        ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
+    except:
+        fig1="Non communiqué"
 
     #Graph tour 2
-    fig2, ax2 = plt.subplots(1, figsize=(6, 3))
-    ax2 = sns.barplot(pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
-    ax2.set_ylabel("")
-    ax2.set_xlabel("")
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-    ax2.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-    score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
-    label = f"{score_percent} %"
-    ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
+    try:
+        fig2, ax2 = plt.subplots(1, figsize=(6, 3))
+        ax2 = sns.barplot(pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+        ax2.set_ylabel("")
+        ax2.set_xlabel("")
+        sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+        ax2.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+        score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
+        label = f"{score_percent} %"
+        ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
+    except:
+        fig2="Non communiqué"
 
 
     # REAL ESTATE DATA
