@@ -156,20 +156,20 @@ with title_image_next:
      
 
 folder = "processed_data"
-insee_data_file = rf"{folder}\2020_insee_data_population.parquet.gzip"
-insee_data_sum_stat = rf"{folder}\2020_insee_data_population_sum_stat.parquet.gzip"
-cityhall_elec_data_file = rf"{folder}\2020_gouv_data_city_hall_elections.parquet.gzip"
-pres_elec_data_file = rf"{folder}\2022_gouv_data_pres_elections.parquet.gzip"
+insee_data_file = os.path.join(folder,"2020_insee_data_population.parquet.gzip")
+insee_data_sum_stat = os.path.join(folder,"2020_insee_data_population_sum_stat.parquet.gzip")
+cityhall_elec_data_file = os.path.join(folder,"2020_gouv_data_city_hall_elections.parquet.gzip")
+pres_elec_data_file = os.path.join(folder,"2022_gouv_data_pres_elections.parquet.gzip")
 insee_city_name_id = os.path.join(folder,"cities_insee_id.parquet.gzip")
-insee_housing_const = rf"{folder}\2020_housing_constr_period.parquet.gzip"
-insee_hlm = rf"{folder}\2020_housing_hlm.parquet.gzip"
-insee_immigration = rf"{folder}\2020_housing_immigration.parquet.gzip"
-insee_nb_rooms = rf"{folder}\2020_housing_nb_rooms.parquet.gzip"
-insee_owner_share = rf"{folder}\2020_housing_owner_share.parquet.gzip"
-insee_housing_size = rf"{folder}\2020_housing_size.parquet.gzip"
-insee_housing_age = rf"{folder}\2020_housing_age.parquet.gzip"
-real_estate_2023 = rf"{folder}\2023_real_estate_mkt.parquet.gzip"
-wheather_data_2020_2023 = rf"{folder}\2020_2023_wheather.parquet.gzip"
+insee_housing_const = os.path.join(folder,"2020_housing_constr_period.parquet.gzip")
+insee_hlm = os.path.join(folder,"2020_housing_hlm.parquet.gzip")
+insee_immigration = os.path.join(folder,"2020_housing_immigration.parquet.gzip")
+insee_nb_rooms = os.path.join(folder,"2020_housing_nb_rooms.parquet.gzip")
+insee_owner_share = os.path.join(folder,"2020_housing_owner_share.parquet.gzip")
+insee_housing_size = os.path.join(folder,"2020_housing_size.parquet.gzip")
+insee_housing_age = os.path.join(folder,"2020_housing_age.parquet.gzip")
+real_estate_2023 = os.path.join(folder,"2023_real_estate_mkt.parquet.gzip")
+wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
 
 insee_city_name_df = load_data(insee_city_name_id)
 
