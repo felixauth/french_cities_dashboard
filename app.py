@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import plotly.graph_objs as go
 import plotly.express as px
 import geopy.distance
+import os
 
 #################################### FUNCTIONS #######################################################
 
@@ -159,7 +160,7 @@ insee_data_file = rf"{folder}\2020_insee_data_population.parquet.gzip"
 insee_data_sum_stat = rf"{folder}\2020_insee_data_population_sum_stat.parquet.gzip"
 cityhall_elec_data_file = rf"{folder}\2020_gouv_data_city_hall_elections.parquet.gzip"
 pres_elec_data_file = rf"{folder}\2022_gouv_data_pres_elections.parquet.gzip"
-insee_city_name_id = rf"{folder}\cities_insee_id.parquet.gzip"
+insee_city_name_id = os.path.join(folder,"cities_insee_id.parquet.gzip")
 insee_housing_const = rf"{folder}\2020_housing_constr_period.parquet.gzip"
 insee_hlm = rf"{folder}\2020_housing_hlm.parquet.gzip"
 insee_immigration = rf"{folder}\2020_housing_immigration.parquet.gzip"
