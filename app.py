@@ -29,7 +29,6 @@ def graph_housing(data, city):
     fig, ax = plt.subplots(1, figsize=(11, 6))
     ax = sns.barplot(data = data_format, x="value", y ="LIB_MOD", hue="variable", palette="mako", orient='h')
     sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-    ax.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
     score_percent_city = round(data_format.query("variable == @city")["value"] * 100,1).astype(str) + "%"
     score_percent_nat = round(data_format.query("variable == 'France entière'")["value"] * 100,1).astype(str) + "%"
     ax.bar_label(ax.containers[0], labels = score_percent_city,fmt='%.f')
@@ -37,6 +36,8 @@ def graph_housing(data, city):
 
     ax.set_ylabel(None)
     ax.set_xlabel(None)
+    ax.set_facecolor('white')
+    ax.set(xticklabels=[])
     ax.legend().set_title(None)
 
     return fig
@@ -279,10 +280,11 @@ if launch_button:
             ax1.set_ylabel("")
             ax1.set_xlabel("")
             sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-            ax1.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
             score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
             label = f"{score_percent} %"
             ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
+            ax1.set_facecolor('white')
+            ax1.set(xticklabels=[])
         except:
             fig1="Non communiqué"
 
@@ -293,10 +295,11 @@ if launch_button:
             ax2.set_ylabel("")
             ax2.set_xlabel("")
             sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-            ax2.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
             score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
             label = f"{score_percent} %"
             ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
+            ax2.set_facecolor('white')
+            ax2.set(xticklabels=[])
         except:
             fig2="Non communiqué"
 
@@ -400,7 +403,7 @@ if launch_button:
         st.markdown("""---""")
         st.subheader("Résultat aux élections municipales de 2020")
 
-        item3, item4 = st.columns((1,4))
+        item3, item4 = st.columns((1,8), gap='small')
         with item3:
             image = Image.open('processed_data/interpro_Maire.png')
             st.image(image, width=140)
@@ -410,6 +413,7 @@ if launch_button:
             st.caption(f"**Score :** {elected_candidate_score * 100:,.1f} %")
             st.caption(f"**Liste :** {elected_candidate_list}")
 
+        st.write("##")
         st.subheader("Résultat aux élections présidentielles de 2022")
 
         item5, item6 = st.columns(2,gap='large')
