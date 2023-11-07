@@ -189,257 +189,259 @@ launch_button = st.button("Afficher les données", type="primary")
 
 if launch_button:
 
-    #################################### LOADING DATA #######################################################
+    with st.spinner(text="Chargement des données..."):
 
-    #Geographic data on selected city
-    insee_city_id = insee_city_name_df[insee_city_name_df["LIB_DEP"] == city]["COM"].iloc[0].lstrip("0")
-    insee_city_dep_name = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_DEP"].iloc[0]
-    insee_city_dep_num = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["DEP"].iloc[0]
-    insee_city_reg = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_REG"].iloc[0]
+        #################################### LOADING DATA #######################################################
 
-    st.title(f"📌 {city}")
-    st.markdown(f"🗺️ *{insee_city_dep_name} ({insee_city_dep_num}) - {insee_city_reg}*")
-    st.markdown("""___""")
+        #Geographic data on selected city
+        insee_city_id = insee_city_name_df[insee_city_name_df["LIB_DEP"] == city]["COM"].iloc[0].lstrip("0")
+        insee_city_dep_name = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_DEP"].iloc[0]
+        insee_city_dep_num = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["DEP"].iloc[0]
+        insee_city_reg = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_REG"].iloc[0]
 
-    #Importing summart stats on insee data
-    insee_sum_stats = load_data(insee_data_sum_stat)
-    #Importing data on selected city
-    criteria = [("CODGEO", "==", insee_city_id)]
-    data_combined_enriched = pd.read_parquet(insee_data_file, filters = criteria)
-    cityhall_elec_data = pd.read_parquet(cityhall_elec_data_file, filters = criteria).iloc[0]
-    pres_elec_data = pd.read_parquet(pres_elec_data_file, filters = criteria)
-    insee_hlm_data = pd.read_parquet(insee_hlm, filters = criteria)
-    insee_immigration_data = pd.read_parquet(insee_immigration, filters = criteria)
-    insee_owner_share_data = pd.read_parquet(insee_owner_share, filters = criteria)
-    insee_age_pop = pd.read_parquet(insee_housing_age, filters = criteria)
-    insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
-    dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
+        st.title(f"📌 {city}")
+        st.markdown(f"🗺️ *{insee_city_dep_name} ({insee_city_dep_num}) - {insee_city_reg}*")
+        st.markdown("""___""")
 
-
-    #################################### STORING VALUES #######################################################
-
-    #Importing data on wheather station
-    data_meteo_preproc_df = pd.read_parquet(wheather_data_2020_2023)
-
-    #Insee data - Getting the national values for comparison
-    pop_median = insee_sum_stats.loc["Median","P20_POP"]
-    poverty_rate_median = insee_sum_stats.loc["Median","TP6020"]
-    standard_of_living_median = insee_sum_stats.loc["Median","MED20"]
-    principal_residency_median = insee_sum_stats.loc["Median","RP_SHARE"]
-    unemployment_rate_median = insee_sum_stats.loc["Median","CHOM_RATE"]
-    empty_residency_median = insee_sum_stats.loc["Median","LOGVAC_RATE"]
-    hlm_share_nat = insee_hlm_data["proportion_national"].values[0]
-    immigration_share_nat = insee_immigration_data.query("IMMIM == '1'")["proportion_national"].values[0]
-    owner_share_nat = insee_owner_share_data["proportion_national"].values[0]
-
-    #Insee data - Getting the city values
-    # data_city = data_combined_enriched[data_combined_enriched["CODGEO"] == insee_city_id]
-    pop_city = data_combined_enriched["P20_POP"].values[0]
-    pop_growth_city = data_combined_enriched["POP_GROWTH_RATE"].values[0]
-    principal_residency_city = data_combined_enriched["RP_SHARE"].values[0]
-    unemployment_rate_city = data_combined_enriched["CHOM_RATE"].values[0]
-    empty_residency_city = data_combined_enriched["LOGVAC_RATE"].values[0]
-    city_lat = float(data_combined_enriched["latitude"].values[0])
-    city_long  = float(data_combined_enriched["longitude"].values[0])
-    poverty_rate = float(data_combined_enriched["TP6020"].values[0])
-    standard_of_living = float(data_combined_enriched["MED20"].values[0])
-    hlm_share = insee_hlm_data["proportion_city"].values[0]
-    immigration_share = insee_immigration_data.query("IMMIM == '1'")["proportion_city"].values[0]
-    owner_share = insee_owner_share_data["proportion_city"].values[0]
-
-    missing_value_message = "Non communiqué"
-
-    #City Hall elections data
-    # city_election_data = cityhall_elec_data[cityhall_elec_data["CODGEO"] == insee_city_id].iloc[0]
-    elected_candidate_surname = cityhall_elec_data["Nom"]
-    elected_candidate_name = cityhall_elec_data["Prénom"]
-    elected_candidate_list = cityhall_elec_data["Liste"]
-    elected_candidate_score = cityhall_elec_data["% Voix/Exp"]
-    election_tour = cityhall_elec_data["Tour"]
-    election_tour_string = "1er tour" if election_tour == 1 else "2ème tour"
-
-    #Presidential elections data
-    # pres_election_data_city = pres_elec_data[pres_elec_data["CODGEO"] == insee_city_id]
-    pres_elec_data["Nom_prénom"] = pres_elec_data["Prénom"] + " " + pres_elec_data["Nom"]
-    pres_elec_data_first_round = pres_elec_data.query("Tour == 1")
-    pres_elec_data_second_round = pres_elec_data.query("Tour == 2")
-
-    #Graph age population
-    fig_age_pop = graph_housing(insee_age_pop, city)
-
-    #Graph surface
-    fig_housing_size = graph_housing(insee_surface, city)
-
-    #Graph tour 1
-    try:
-        fig1, ax1 = plt.subplots(1, figsize=(6, 3))
-        ax1 = sns.barplot(data = pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
-        ax1.set_ylabel("")
-        ax1.set_xlabel("")
-        sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-        ax1.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
-        label = f"{score_percent} %"
-        ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
-    except:
-        fig1="Non communiqué"
-
-    #Graph tour 2
-    try:
-        fig2, ax2 = plt.subplots(1, figsize=(6, 3))
-        ax2 = sns.barplot(data = pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
-        ax2.set_ylabel("")
-        ax2.set_xlabel("")
-        sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-        ax2.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
-        score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
-        label = f"{score_percent} %"
-        ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
-    except:
-        fig2="Non communiqué"
+        #Importing summart stats on insee data
+        insee_sum_stats = load_data(insee_data_sum_stat)
+        #Importing data on selected city
+        criteria = [("CODGEO", "==", insee_city_id)]
+        data_combined_enriched = pd.read_parquet(insee_data_file, filters = criteria)
+        cityhall_elec_data = pd.read_parquet(cityhall_elec_data_file, filters = criteria).iloc[0]
+        pres_elec_data = pd.read_parquet(pres_elec_data_file, filters = criteria)
+        insee_hlm_data = pd.read_parquet(insee_hlm, filters = criteria)
+        insee_immigration_data = pd.read_parquet(insee_immigration, filters = criteria)
+        insee_owner_share_data = pd.read_parquet(insee_owner_share, filters = criteria)
+        insee_age_pop = pd.read_parquet(insee_housing_age, filters = criteria)
+        insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
+        dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
 
 
-    # REAL ESTATE DATA
-    dvf_preproc_df = dvf_preproc(dvf_2023)
-    dvf_avg = dvf_per_city(dvf_preproc_df)
+        #################################### STORING VALUES #######################################################
 
-    try:
-        apt_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Appartement","Valeur fonc / surface habitable"].values[0]
-        apt_nb_transac = dvf_preproc_df["Type local"].value_counts()["Appartement"]
-    except IndexError:
-        apt_price_avg = None
-    try:
-        house_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Maison","Valeur fonc / surface habitable"].values[0]
-        house_nb_transac = dvf_preproc_df["Type local"].value_counts()["Maison"]
-    except IndexError:
-        house_price_avg = None
+        #Importing data on wheather station
+        data_meteo_preproc_df = pd.read_parquet(wheather_data_2020_2023)
 
-    # WHEATHER DATA
-    stations_coord = wheather_station_list(data_meteo_preproc_df)
-    closest_station = find_closest_station(stations_coord, (city_lat, city_long))
-    data_meteo_city = data_meteo_preproc_df.query("numer_sta == @closest_station").reset_index(drop=True)
-    temp_city = temp_by_season(data_meteo_city)
-    data_meteo_nat = data_meteo_national_avg(data_meteo_preproc_df)
-    pluvio_avg_city = pluvio_moyenne(data_meteo_city)
-    pluvio_avg_nat = pluvio_moyenne(data_meteo_nat)
-    pluvio_df = pd.merge(pluvio_avg_city, pluvio_avg_nat, how="left", on=["month","month_name"], suffixes=('_city', '_nat'))\
-                        .rename(columns={"precipitations_3h_city": city,"precipitations_3h_nat":"Moy. villes françaises"})
-    pluvio_fig = graph_pluvio(pluvio_df, city)
+        #Insee data - Getting the national values for comparison
+        pop_median = insee_sum_stats.loc["Median","P20_POP"]
+        poverty_rate_median = insee_sum_stats.loc["Median","TP6020"]
+        standard_of_living_median = insee_sum_stats.loc["Median","MED20"]
+        principal_residency_median = insee_sum_stats.loc["Median","RP_SHARE"]
+        unemployment_rate_median = insee_sum_stats.loc["Median","CHOM_RATE"]
+        empty_residency_median = insee_sum_stats.loc["Median","LOGVAC_RATE"]
+        hlm_share_nat = insee_hlm_data["proportion_national"].values[0]
+        immigration_share_nat = insee_immigration_data.query("IMMIM == '1'")["proportion_national"].values[0]
+        owner_share_nat = insee_owner_share_data["proportion_national"].values[0]
 
-    #################################### DISPLAYING DATA #######################################################
+        #Insee data - Getting the city values
+        # data_city = data_combined_enriched[data_combined_enriched["CODGEO"] == insee_city_id]
+        pop_city = data_combined_enriched["P20_POP"].values[0]
+        pop_growth_city = data_combined_enriched["POP_GROWTH_RATE"].values[0]
+        principal_residency_city = data_combined_enriched["RP_SHARE"].values[0]
+        unemployment_rate_city = data_combined_enriched["CHOM_RATE"].values[0]
+        empty_residency_city = data_combined_enriched["LOGVAC_RATE"].values[0]
+        city_lat = float(data_combined_enriched["latitude"].values[0])
+        city_long  = float(data_combined_enriched["longitude"].values[0])
+        poverty_rate = float(data_combined_enriched["TP6020"].values[0])
+        standard_of_living = float(data_combined_enriched["MED20"].values[0])
+        hlm_share = insee_hlm_data["proportion_city"].values[0]
+        immigration_share = insee_immigration_data.query("IMMIM == '1'")["proportion_city"].values[0]
+        owner_share = insee_owner_share_data["proportion_city"].values[0]
 
-    st.map(pd.DataFrame({"lat":city_lat, "lon":city_long}, index=[0]))
+        missing_value_message = "Non communiqué"
 
-    st.markdown("""___""")
+        #City Hall elections data
+        # city_election_data = cityhall_elec_data[cityhall_elec_data["CODGEO"] == insee_city_id].iloc[0]
+        elected_candidate_surname = cityhall_elec_data["Nom"]
+        elected_candidate_name = cityhall_elec_data["Prénom"]
+        elected_candidate_list = cityhall_elec_data["Liste"]
+        elected_candidate_score = cityhall_elec_data["% Voix/Exp"]
+        election_tour = cityhall_elec_data["Tour"]
+        election_tour_string = "1er tour" if election_tour == 1 else "2ème tour"
 
-    st.subheader("🌡️ Températures")
-    st.caption("Moyenne 2020-2023")
-    temp1, temp2, temp3, temp4=st.columns(4,gap='large')
-    with temp1:
-            st.metric(label="☀️ Eté", value=f"{round(temp_city['été'], 1)} °C")
-    with temp2:
-            st.metric(label="🍂 Automne", value=f"{round(temp_city['automne'], 1)} °C")
-    with temp3:
-            st.metric(label="❄️ Hiver", value=f"{round(temp_city['hiver'], 1)} °C")
-    with temp4:
-            st.metric(label="🌼 Printemps", value=f"{round(temp_city['printemps'], 1)} °C")
+        #Presidential elections data
+        # pres_election_data_city = pres_elec_data[pres_elec_data["CODGEO"] == insee_city_id]
+        pres_elec_data["Nom_prénom"] = pres_elec_data["Prénom"] + " " + pres_elec_data["Nom"]
+        pres_elec_data_first_round = pres_elec_data.query("Tour == 1")
+        pres_elec_data_second_round = pres_elec_data.query("Tour == 2")
 
-    st.write("##")
-    st.subheader("🌧️ Pluviométrie")
-    st.caption("Moyenne 2020-2023")
-    st.write(pluvio_fig)
+        #Graph age population
+        fig_age_pop = graph_housing(insee_age_pop, city)
 
-    st.markdown("""___""")
+        #Graph surface
+        fig_housing_size = graph_housing(insee_surface, city)
 
-    st.markdown("*Source:* **INSEE / 2020**")
-    total1, total2, total3=st.columns(3,gap='large')
-    with total1:
-            st.info('Population',icon="👫")
-            st.metric(label="Nb habitants",value=f"{pop_city:,.0f}".replace(","," "),delta=f"{pop_growth_city * 100:,.0f} % vs 2014")
-    with total2:
-            st.info('Taux de pauvreté 2020',icon="💰")
-            metric_label = "Taux pauvreté"
-            if pd.isna(poverty_rate):
-                st.metric(label=metric_label,value=missing_value_message)
-            else:
-                st.metric(label=metric_label,value=f"{poverty_rate:,.0f} %")
-            st.text(f'France entière: {poverty_rate_median:,.0f} %')
-    with total3:
-            st.info('Taux de chômage',icon="👔")
-            metric_label = "Nb chômeurs / Population active"
-            if pd.isna(unemployment_rate_city):
-                st.metric(label=metric_label,value=missing_value_message)
-            else:
-                st.metric(label=metric_label,value=f"{unemployment_rate_city * 100:,.0f} %")
-            st.text(f'France entière: {unemployment_rate_median * 100:,.0f} %')
+        #Graph tour 1
+        try:
+            fig1, ax1 = plt.subplots(1, figsize=(6, 3))
+            ax1 = sns.barplot(data = pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+            ax1.set_ylabel("")
+            ax1.set_xlabel("")
+            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+            ax1.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+            score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
+            label = f"{score_percent} %"
+            ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
+        except:
+            fig1="Non communiqué"
 
-    total4, total5, total6=st.columns(3,gap='large')
-    with total4:
-            st.info('Part de HLM',icon="🏢")
-            st.metric(label="Nb HLM / Nb total logements",value=f"{hlm_share * 100:,.0f} %")
-            st.text(f'France entière : {hlm_share_nat * 100:,.0f} %')
-    with total5:
-            st.info('Part de propriétaires',icon="🔑")
-            st.metric(label="Nb propriétaires / Nb total logements",value=f"{owner_share * 100:,.0f} %")
-            st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
-    with total6:
-            st.info("Part d'immigrés",icon="🌏")
-            st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
-            st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
+        #Graph tour 2
+        try:
+            fig2, ax2 = plt.subplots(1, figsize=(6, 3))
+            ax2 = sns.barplot(data = pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+            ax2.set_ylabel("")
+            ax2.set_xlabel("")
+            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+            ax2.xaxis.set_major_formatter(mtick.PercentFormatter(1.0))
+            score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
+            label = f"{score_percent} %"
+            ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
+        except:
+            fig2="Non communiqué"
 
-    total7, total8=st.columns(2,gap='large')
-    with total7:
-        st.info('Age du référent du ménage',icon="👴🏼")
-        st.write(fig_age_pop)
-    with total8:
-        st.info('Taille des logements',icon="📐")
-        st.write(fig_housing_size)
 
-    st.markdown("""---""")
-    st.subheader("Résultat aux élections municipales de 2020")
+        # REAL ESTATE DATA
+        dvf_preproc_df = dvf_preproc(dvf_2023)
+        dvf_avg = dvf_per_city(dvf_preproc_df)
 
-    item3, item4 = st.columns((1,4))
-    with item3:
-        image = Image.open('processed_data/interpro_Maire.png')
-        st.image(image, width=140)
-    with item4:
-        st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
-        st.caption(f"Elu(e) au {election_tour_string}")
-        st.caption(f"**Score :** {elected_candidate_score * 100:,.1f} %")
-        st.caption(f"**Liste :** {elected_candidate_list}")
+        try:
+            apt_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Appartement","Valeur fonc / surface habitable"].values[0]
+            apt_nb_transac = dvf_preproc_df["Type local"].value_counts()["Appartement"]
+        except IndexError:
+            apt_price_avg = None
+        try:
+            house_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Maison","Valeur fonc / surface habitable"].values[0]
+            house_nb_transac = dvf_preproc_df["Type local"].value_counts()["Maison"]
+        except IndexError:
+            house_price_avg = None
 
-    st.subheader("Résultat aux élections présidentielles de 2022")
+        # WHEATHER DATA
+        stations_coord = wheather_station_list(data_meteo_preproc_df)
+        closest_station = find_closest_station(stations_coord, (city_lat, city_long))
+        data_meteo_city = data_meteo_preproc_df.query("numer_sta == @closest_station").reset_index(drop=True)
+        temp_city = temp_by_season(data_meteo_city)
+        data_meteo_nat = data_meteo_national_avg(data_meteo_preproc_df)
+        pluvio_avg_city = pluvio_moyenne(data_meteo_city)
+        pluvio_avg_nat = pluvio_moyenne(data_meteo_nat)
+        pluvio_df = pd.merge(pluvio_avg_city, pluvio_avg_nat, how="left", on=["month","month_name"], suffixes=('_city', '_nat'))\
+                            .rename(columns={"precipitations_3h_city": city,"precipitations_3h_nat":"Moy. villes françaises"})
+        pluvio_fig = graph_pluvio(pluvio_df, city)
 
-    item5, item6 = st.columns(2,gap='large')
-    with item5:
-        st.markdown("#### Premier tour")
-        st.write(fig1)
-    with item6:
-        st.markdown("#### Second tour")
-        st.write(fig2)
+        #################################### DISPLAYING DATA #######################################################
 
-    st.markdown("""___""")
+        st.map(pd.DataFrame({"lat":city_lat, "lon":city_long}, index=[0]))
 
-    st.subheader("Prix immobilier")
-    st.markdown("*Moyenne des transactions du premier semestre 2023*")
+        st.markdown("""___""")
 
-    item7, item8 = st.columns(2,gap='large')
-    with item7:
-        st.info("Appartements",icon="🏬")
-        st.metric(label="Valeur foncière / Surface habitable",value=f"{apt_price_avg:,.0f} €/m²".replace(","," ") if apt_price_avg else "Aucune transaction")
-        if apt_price_avg:
-            st.text(f"Nb transactions : {apt_nb_transac}")
-    with item8:
-        st.info("Maisons",icon="🏚️")
-        st.metric(label="Valeur foncière / Surface habitable",value=f"{house_price_avg:,.0f} €/m²".replace(","," ") if house_price_avg else "Aucune transaction")
-        if house_price_avg:
-            st.text(f"Nb transactions : {house_nb_transac}")
+        st.subheader("🌡️ Températures")
+        st.caption("Moyenne 2020-2023")
+        temp1, temp2, temp3, temp4=st.columns(4,gap='large')
+        with temp1:
+                st.metric(label="☀️ Eté", value=f"{round(temp_city['été'], 1)} °C")
+        with temp2:
+                st.metric(label="🍂 Automne", value=f"{round(temp_city['automne'], 1)} °C")
+        with temp3:
+                st.metric(label="❄️ Hiver", value=f"{round(temp_city['hiver'], 1)} °C")
+        with temp4:
+                st.metric(label="🌼 Printemps", value=f"{round(temp_city['printemps'], 1)} °C")
 
-    # on = st.button('Afficher le détail des transactions')
-    # if (launch_button) & (on) :
+        st.write("##")
+        st.subheader("🌧️ Pluviométrie")
+        st.caption("Moyenne 2020-2023")
+        st.write(pluvio_fig)
 
-    st.write("##")
+        st.markdown("""___""")
 
-    st.markdown("**Détail des transactions du premier semestre 2023**")
-    dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
-    st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
+        st.markdown("*Source:* **INSEE / 2020**")
+        total1, total2, total3=st.columns(3,gap='large')
+        with total1:
+                st.info('Population',icon="👫")
+                st.metric(label="Nb habitants",value=f"{pop_city:,.0f}".replace(","," "),delta=f"{pop_growth_city * 100:,.0f} % vs 2014")
+        with total2:
+                st.info('Taux de pauvreté 2020',icon="💰")
+                metric_label = "Taux pauvreté"
+                if pd.isna(poverty_rate):
+                    st.metric(label=metric_label,value=missing_value_message)
+                else:
+                    st.metric(label=metric_label,value=f"{poverty_rate:,.0f} %")
+                st.text(f'France entière: {poverty_rate_median:,.0f} %')
+        with total3:
+                st.info('Taux de chômage',icon="👔")
+                metric_label = "Nb chômeurs / Population active"
+                if pd.isna(unemployment_rate_city):
+                    st.metric(label=metric_label,value=missing_value_message)
+                else:
+                    st.metric(label=metric_label,value=f"{unemployment_rate_city * 100:,.0f} %")
+                st.text(f'France entière: {unemployment_rate_median * 100:,.0f} %')
+
+        total4, total5, total6=st.columns(3,gap='large')
+        with total4:
+                st.info('Part de HLM',icon="🏢")
+                st.metric(label="Nb HLM / Nb total logements",value=f"{hlm_share * 100:,.0f} %")
+                st.text(f'France entière : {hlm_share_nat * 100:,.0f} %')
+        with total5:
+                st.info('Part de propriétaires',icon="🔑")
+                st.metric(label="Nb propriétaires / Nb total logements",value=f"{owner_share * 100:,.0f} %")
+                st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
+        with total6:
+                st.info("Part d'immigrés",icon="🌏")
+                st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
+                st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
+
+        total7, total8=st.columns(2,gap='large')
+        with total7:
+            st.info('Age du référent du ménage',icon="👴🏼")
+            st.write(fig_age_pop)
+        with total8:
+            st.info('Taille des logements',icon="📐")
+            st.write(fig_housing_size)
+
+        st.markdown("""---""")
+        st.subheader("Résultat aux élections municipales de 2020")
+
+        item3, item4 = st.columns((1,4))
+        with item3:
+            image = Image.open('processed_data/interpro_Maire.png')
+            st.image(image, width=140)
+        with item4:
+            st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
+            st.caption(f"Elu(e) au {election_tour_string}")
+            st.caption(f"**Score :** {elected_candidate_score * 100:,.1f} %")
+            st.caption(f"**Liste :** {elected_candidate_list}")
+
+        st.subheader("Résultat aux élections présidentielles de 2022")
+
+        item5, item6 = st.columns(2,gap='large')
+        with item5:
+            st.markdown("#### Premier tour")
+            st.write(fig1)
+        with item6:
+            st.markdown("#### Second tour")
+            st.write(fig2)
+
+        st.markdown("""___""")
+
+        st.subheader("Prix immobilier")
+        st.markdown("*Moyenne des transactions du premier semestre 2023*")
+
+        item7, item8 = st.columns(2,gap='large')
+        with item7:
+            st.info("Appartements",icon="🏬")
+            st.metric(label="Valeur foncière / Surface habitable",value=f"{apt_price_avg:,.0f} €/m²".replace(","," ") if apt_price_avg else "Aucune transaction")
+            if apt_price_avg:
+                st.text(f"Nb transactions : {apt_nb_transac}")
+        with item8:
+            st.info("Maisons",icon="🏚️")
+            st.metric(label="Valeur foncière / Surface habitable",value=f"{house_price_avg:,.0f} €/m²".replace(","," ") if house_price_avg else "Aucune transaction")
+            if house_price_avg:
+                st.text(f"Nb transactions : {house_nb_transac}")
+
+        # on = st.button('Afficher le détail des transactions')
+        # if (launch_button) & (on) :
+
+        st.write("##")
+
+        st.markdown("**Détail des transactions du premier semestre 2023**")
+        dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
+        st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
