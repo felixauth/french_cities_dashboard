@@ -231,10 +231,7 @@ if launch_button:
         principal_residency_median = insee_sum_stats.loc["Median","RP_SHARE"]
         unemployment_rate_median = insee_sum_stats.loc["Median","CHOM_RATE"]
         empty_residency_median = insee_sum_stats.loc["Median","LOGVAC_RATE"]
-        hlm_share_nat = insee_hlm_data["proportion_national"].values[0]
-        immigration_share_nat = insee_immigration_data.query("IMMIM == '1'")["proportion_national"].values[0]
-        owner_share_nat = insee_owner_share_data["proportion_national"].values[0]
-
+        
         #Insee data - Getting the city values
         # data_city = data_combined_enriched[data_combined_enriched["CODGEO"] == insee_city_id]
         pop_city = data_combined_enriched["P20_POP"].values[0]
@@ -246,9 +243,25 @@ if launch_button:
         city_long  = float(data_combined_enriched["longitude"].values[0])
         poverty_rate = float(data_combined_enriched["TP6020"].values[0])
         standard_of_living = float(data_combined_enriched["MED20"].values[0])
-        hlm_share = insee_hlm_data["proportion_city"].values[0]
-        immigration_share = insee_immigration_data.query("IMMIM == '1'")["proportion_city"].values[0]
-        owner_share = insee_owner_share_data["proportion_city"].values[0]
+
+        try:
+            hlm_share = insee_hlm_data["proportion_city"].values[0]
+            hlm_share_nat = insee_hlm_data["proportion_national"].values[0]
+        except IndexError:
+            hlm_share = None
+            hlm_share_nat = None
+        try:
+            immigration_share_nat = insee_immigration_data.query("IMMIM == '1'")["proportion_national"].values[0]
+            immigration_share = insee_immigration_data.query("IMMIM == '1'")["proportion_city"].values[0]
+        except IndexError:
+            immigration_share_nat = None
+            immigration_share = None
+        try:
+            owner_share_nat = insee_owner_share_data["proportion_national"].values[0]
+            owner_share = insee_owner_share_data["proportion_city"].values[0]
+        except IndexError:
+            owner_share_nat = None
+            owner_share = None
 
         missing_value_message = "Non communiqué"
 
@@ -381,16 +394,28 @@ if launch_button:
         total4, total5, total6=st.columns(3,gap='large')
         with total4:
                 st.info('Part de HLM',icon="🏢")
-                st.metric(label="Nb HLM / Nb total logements",value=f"{hlm_share * 100:,.0f} %")
-                st.text(f'France entière : {hlm_share_nat * 100:,.0f} %')
+                metric_label = "Nb HLM / Nb total logements"
+                if pd.isna(hlm_share):
+                    st.metric(label=metric_label,value=missing_value_message)
+                else:
+                    st.metric(label=metric_label,value=f"{hlm_share * 100:,.0f} %")
+                    st.text(f'France entière : {hlm_share_nat * 100:,.0f} %')
         with total5:
                 st.info('Part de propriétaires',icon="🔑")
-                st.metric(label="Nb propriétaires / Nb total logements",value=f"{owner_share * 100:,.0f} %")
-                st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
+                metric_label = "Nb propriétaires / Nb total logements"
+                if pd.isna(owner_share):
+                    st.metric(label=metric_label,value=missing_value_message)
+                else:
+                    st.metric(label=metric_label,value=f"{owner_share * 100:,.0f} %")
+                    st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
         with total6:
                 st.info("Part d'immigrés",icon="🌏")
-                st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
-                st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
+                metric_label = "Nb immigrés / Population"
+                if pd.isna(immigration_share):
+                    st.metric(label=metric_label,value=missing_value_message)
+                else:
+                    st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
+                    st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
 
         total7, total8=st.columns(2,gap='large')
         with total7:
