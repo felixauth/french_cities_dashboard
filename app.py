@@ -28,7 +28,7 @@ def graph_housing(data, city):
                           )
     fig, ax = plt.subplots(1, figsize=(11, 6))
     ax = sns.barplot(data = data_format, x="value", y ="LIB_MOD", hue="variable", palette="mako", orient='h')
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
     score_percent_city = round(data_format.query("variable == @city")["value"] * 100,1).astype(str) + "%"
     score_percent_nat = round(data_format.query("variable == 'France entière'")["value"] * 100,1).astype(str) + "%"
     ax.bar_label(ax.containers[0], labels = score_percent_city,fmt='%.f')
@@ -43,6 +43,7 @@ def graph_housing(data, city):
     return fig
 
 def dvf_preproc(dvf_clean_df):
+
     """
     Returns a dataframe with real estate transactions for houses and apartments, cleaned of outliers and duplicates.
     """
@@ -51,9 +52,10 @@ def dvf_preproc(dvf_clean_df):
         (dvf_clean_df["Nature mutation"] == "Vente")
         ].reset_index(drop=True)
 
+    # Excluding outliers
     dvf_preproc_unique = dvf_house_apt.drop_duplicates(subset=["Date mutation","Valeur fonciere", "No voie", "Voie"])
-    lower_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.1)
-    upper_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.9)
+    lower_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.05)
+    upper_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.95)
     dvf_preproc_clean = dvf_preproc_unique.copy()
     dvf_preproc_clean["Valeur fonc / surface habitable"] = dvf_preproc_clean["Valeur fonc / surface habitable"].clip(lower=lower_threshold, upper=upper_threshold)
     dvf_preproc_no_outlier = dvf_preproc_clean[~dvf_preproc_clean["Valeur fonc / surface habitable"].isin([lower_threshold, upper_threshold])]
@@ -77,6 +79,17 @@ def wheather_station_list(data_meteo_preproc_df):
 
     stations_coord = data_meteo_preproc_df.query("numer_sta != 7661").loc[:,["codegeo","nom_epci","libgeo","numer_sta","latitude","longitude"]].drop_duplicates(subset=["numer_sta"]).sort_values(by=["libgeo"]).reset_index(drop=True)
     stations_coord["coord"] = list(zip(stations_coord["latitude"], stations_coord["longitude"]))
+    return stations_coord
+
+@st.cache_data
+def pollution_station_list(data_pollution_df):
+
+    stations_coord = data_pollution_df.loc[:,["Zas","code site","nom site","coord"]]\
+        .drop_duplicates(subset=["code site"])\
+            .sort_values(by=["nom site"])\
+                .reset_index(drop=True)\
+                    .rename(columns={"code site":"numer_sta"})
+    
     return stations_coord
 
 def find_closest_station(station_df, coordinates: tuple):
@@ -135,6 +148,18 @@ def graph_pluvio(data_pluvio, city):
     sns.set_style("darkgrid")
     return fig
 
+def graph_poll(data_poll, city, reco_OMS):
+    data_format = pd.melt(data_poll.reset_index(), id_vars = ["date_clean"], value_vars = [city,"Moy. nationale", "Recommandation OMS"])
+    fig, ax = plt.subplots(1, figsize=(12, 4))
+    ax = sns.lineplot(data = data_format.query("variable != 'Recommandation OMS'"), x="date_clean", y ="value", hue="variable", palette="mako")
+    ax = sns.lineplot(data = data_format.query("variable == 'Recommandation OMS'"), x="date_clean", y ="value", color="red", linestyle='--')
+    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+    ax.legend().set_title(None)
+    ax.set_ylabel("µg/m3")
+    ax.set_xlabel(None)
+    ax.annotate("Seuil journalié recommandé par l'OMS", xy = (pd.to_datetime('2023-01-15'), reco_OMS), xytext=(pd.to_datetime('2023-01-04'), reco_OMS + 0.5), color='red')
+    return fig
+
 #################################### WELCOME PAGE #######################################################
 
 st.set_page_config(
@@ -169,6 +194,7 @@ insee_housing_size = os.path.join(folder,"2020_housing_size.parquet.gzip")
 insee_housing_age = os.path.join(folder,"2020_housing_age.parquet.gzip")
 real_estate_2023 = os.path.join(folder,"2023_real_estate_mkt.parquet.gzip")
 wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
+pollution_data_2023 = os.path.join(folder,"2023_pollution.parquet.gzip")
 
 insee_city_name_df = load_data(insee_city_name_id)
 
@@ -223,6 +249,9 @@ if launch_button:
 
         #Importing data on wheather station
         data_meteo_preproc_df = pd.read_parquet(wheather_data_2020_2023)
+
+        #Importing data on pollution
+        data_pollution_df = pd.read_parquet(pollution_data_2023)
 
         #Insee data - Getting the national values for comparison
         pop_median = insee_sum_stats.loc["Median","P20_POP"]
@@ -292,7 +321,7 @@ if launch_button:
             ax1 = sns.barplot(data = pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
             ax1.set_ylabel("")
             ax1.set_xlabel("")
-            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
             score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
             label = f"{score_percent} %"
             ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
@@ -307,7 +336,7 @@ if launch_button:
             ax2 = sns.barplot(data = pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
             ax2.set_ylabel("")
             ax2.set_xlabel("")
-            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
+            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
             score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
             label = f"{score_percent} %"
             ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
@@ -335,6 +364,7 @@ if launch_button:
         # WHEATHER DATA
         stations_coord = wheather_station_list(data_meteo_preproc_df)
         closest_station = find_closest_station(stations_coord, (city_lat, city_long))
+        closest_station_name = stations_coord[stations_coord["numer_sta"] == closest_station]["nom_epci"].values[0]
         data_meteo_city = data_meteo_preproc_df.query("numer_sta == @closest_station").reset_index(drop=True)
         temp_city = temp_by_season(data_meteo_city)
         data_meteo_nat = data_meteo_national_avg(data_meteo_preproc_df)
@@ -343,6 +373,19 @@ if launch_button:
         pluvio_df = pd.merge(pluvio_avg_city, pluvio_avg_nat, how="left", on=["month","month_name"], suffixes=('_city', '_nat'))\
                             .rename(columns={"precipitations_3h_city": city,"precipitations_3h_nat":"Moy. villes françaises"})
         pluvio_fig = graph_pluvio(pluvio_df, city)
+
+        # POLLUTION DATA
+        poll_station_coord = pollution_station_list(data_pollution_df)
+        poll_closest_station = find_closest_station(poll_station_coord, (city_lat, city_long))
+        poll_zas_name, poll_site_name = poll_station_coord[poll_station_coord["numer_sta"] == poll_closest_station]["Zas"].values[0], poll_station_coord[poll_station_coord["numer_sta"] == poll_closest_station]["nom site"].values[0]
+        poll_data_city = data_pollution_df[data_pollution_df["code site"] == poll_closest_station].reset_index(drop=True)
+        poll_avg_city = poll_data_city.groupby("date_clean", as_index=False)["valeur"].mean().reset_index(drop=True)
+        poll_avg_nat = data_pollution_df.groupby("date_clean", as_index=False)["valeur"].mean().reset_index(drop=True)
+        poll_df = pd.merge(poll_avg_city, poll_avg_nat, how="left", on=["date_clean"], suffixes=('_city', '_nat'))\
+                            .rename(columns={"valeur_city": city,"valeur_nat":"Moy. nationale"})
+        reco_OMS = 15
+        poll_df["Recommandation OMS"] = reco_OMS
+        poll_fig = graph_poll(poll_df, city, reco_OMS)
 
         #################################### DISPLAYING DATA #######################################################
 
@@ -366,6 +409,15 @@ if launch_button:
         st.subheader("🌧️ Pluviométrie")
         st.caption("Moyenne 2020-2023")
         st.write(pluvio_fig)
+        st.caption(f"Station de mesure : **{closest_station_name}**")
+                   
+        st.write("##")
+        st.subheader("🏭 Pollution")
+        st.caption(f"Niveau de particules fines (< 2.5 µg/m3) - Mesuré sur le site : {poll_zas_name} - {poll_site_name}")
+        st.write(poll_fig)
+        st.markdown("💡 Les particules fines, ou PM2.5, sont émises principalement lors des phénomènes de combustion et altèrent la santé respiratoire et cardiovasculaire")
+        st.markdown("💡 L'OMS recommande de ne pas dépasser **5 µg/m3 de concentration moyenne par an** et **15 µg/m3 de concentration moyenne par jour** (i.e 3 à 4 jours de dépassement par an) ")
+        st.caption("**Source :** 'WHO 2021 Air quality guidelines: Global update 2021'")
 
         st.markdown("""___""")
 
