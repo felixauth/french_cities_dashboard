@@ -157,7 +157,7 @@ def graph_poll(data_poll, city, reco_OMS):
     ax.legend().set_title(None)
     ax.set_ylabel("µg/m3")
     ax.set_xlabel(None)
-    ax.annotate("Seuil journalié recommandé par l'OMS", xy = (pd.to_datetime('2023-01-15'), reco_OMS), xytext=(pd.to_datetime('2023-01-04'), reco_OMS + 0.5), color='red')
+    ax.annotate("Seuil journalier recommandé par l'OMS", xy = (pd.to_datetime('2023-01-15'), reco_OMS), xytext=(pd.to_datetime('2023-01-04'), reco_OMS + 0.5), color='red')
     return fig
 
 #################################### WELCOME PAGE #######################################################
