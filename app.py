@@ -436,7 +436,8 @@ if launch_button:
 
         st.markdown("""___""")
 
-        st.markdown("*Source:* **INSEE / 2020**")
+        st.subheader("📋 Recensement 2020")
+
         total1, total2, total3=st.columns(3,gap='large')
         with total1:
                 st.info('Population',icon="👫")
@@ -491,6 +492,9 @@ if launch_button:
         with total8:
             st.info('Taille des logements',icon="📐")
             st.write(fig_housing_size)
+        
+        st.write("##")
+        st.caption("**Source :** INSEE | 2020")
 
         st.markdown("""---""")
         st.subheader("Résultat aux élections municipales de 2020")
@@ -551,6 +555,6 @@ if launch_button:
             st.metric(label="Taxe foncière sur les propriétés bâties (TFPB)",value=f"{tfb_city:,.0f} %")
             st.text(f'Moyenne nationale : {tfb_nat:,.0f} %')
         with item10:
-            st.info("Taxe d'enlèvement des ordures ménagères",icon="🚮")
+            st.info("Taxe d'enlèvement des ordures ménagères",icon="🗑️")
             st.metric(label="TEOM - Taux plein net",value=f"{teom_city:,.0f} %")
             st.text(f'Moyenne nationale : {teom_nat:,.0f} %')
