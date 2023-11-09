@@ -196,6 +196,7 @@ real_estate_2023 = os.path.join(folder,"2023_real_estate_mkt.parquet.gzip")
 wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
 pollution_data_2023 = os.path.join(folder,"2023_pollution.parquet.gzip")
 local_tax_2022 = os.path.join(folder, "2022_local_taxes.parquet.gzip")
+rental_2022 = os.path.join(folder, "2022_rental_indices.parquet.gzip")
 
 insee_city_name_df = load_data(insee_city_name_id)
 
@@ -245,6 +246,7 @@ if launch_button:
         insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
         dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
         taxes = pd.read_parquet(local_tax_2022)
+        rental = pd.read_parquet(rental_2022, filters=criteria)
 
         #################################### STORING VALUES #######################################################
 
@@ -348,6 +350,7 @@ if launch_button:
 
 
         # REAL ESTATE DATA
+        ## price per square meter
         dvf_preproc_df = dvf_preproc(dvf_2023)
         dvf_avg = dvf_per_city(dvf_preproc_df)
 
@@ -361,6 +364,29 @@ if launch_button:
             house_nb_transac = dvf_preproc_df["Type local"].value_counts()["Maison"]
         except IndexError:
             house_price_avg = None
+
+        ## rental
+        try:
+            type_r = 'apt'
+            rental_apt_city = rental.loc[
+                rental["type"] == type_r,
+                "loypredm2"].values[0]
+            rental_nobs_apt_city = rental.loc[
+                rental["type"] == type_r,
+                "nbobs_com"].values[0]
+        except IndexError:
+            rental_apt_city = None
+        try:
+            type_r = 'house'
+            rental_house_city = rental.loc[
+                rental["type"] == type_r,
+                "loypredm2"].values[0]
+            rental_nobs_house_city = rental.loc[
+                rental["type"] == type_r,
+                "nbobs_com"].values[0]
+        except IndexError:
+            rental_house_city = None
+
 
         # WHEATHER DATA
         stations_coord = wheather_station_list(data_meteo_preproc_df)
@@ -537,14 +563,32 @@ if launch_button:
             if house_price_avg:
                 st.text(f"Nb transactions : {house_nb_transac}")
 
-        # on = st.button('Afficher le détail des transactions')
-        # if (launch_button) & (on) :
-
         st.write("##")
 
         st.markdown("**Détail des transactions du premier semestre 2023**")
         dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
         st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
+
+        st.write("##")
+
+        st.subheader("Loyer moyen")
+        st.markdown("*Moyenne du T3 2022*")
+
+        rent1, rent2 = st.columns(2,gap='large')
+        with rent1:
+            st.info("Appartements",icon="🏬")
+            st.metric(label="Loyer d'annonce charges comprises pour un non meublé",value=f"{rental_apt_city:,.0f} €/m²" if rental_apt_city else "Aucune annonce")
+            if rental_apt_city:
+                st.text(f"Nb annonces : {rental_nobs_apt_city}")
+        with rent2:
+            st.info("Maisons",icon="🏚️")
+            st.metric(label="Loyer d'annonce charges comprises pour un non meublé",value=f"{rental_house_city:,.0f} €/m²" if rental_house_city else "Aucune annonce")
+            if rental_house_city:
+                st.text(f"Nb annonces : {rental_nobs_house_city}")
+
+        st.markdown("💡 *Les indicateurs de loyer sont calculés par l'Agence Nationale pour l'Information sur le Logement (ANIL), grâce à l'utilisation des données d'annonces parues sur Leboncoin et SeLoger au T3 2022*")
+
+        st.write("##")
 
         st.subheader("Impôts locaux")
         st.markdown("*Votés en 2022*")
