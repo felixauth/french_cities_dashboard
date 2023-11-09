@@ -28,7 +28,7 @@ def graph_housing(data, city):
                           )
     fig, ax = plt.subplots(1, figsize=(11, 6))
     ax = sns.barplot(data = data_format, x="value", y ="LIB_MOD", hue="variable", palette="mako", orient='h')
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
+    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=True)
     score_percent_city = round(data_format.query("variable == @city")["value"] * 100,1).astype(str) + "%"
     score_percent_nat = round(data_format.query("variable == 'France entière'")["value"] * 100,1).astype(str) + "%"
     ax.bar_label(ax.containers[0], labels = score_percent_city,fmt='%.f')
@@ -195,6 +195,7 @@ insee_housing_age = os.path.join(folder,"2020_housing_age.parquet.gzip")
 real_estate_2023 = os.path.join(folder,"2023_real_estate_mkt.parquet.gzip")
 wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
 pollution_data_2023 = os.path.join(folder,"2023_pollution.parquet.gzip")
+local_tax_2022 = os.path.join(folder, "2022_local_taxes.parquet.gzip")
 
 insee_city_name_df = load_data(insee_city_name_id)
 
@@ -243,7 +244,7 @@ if launch_button:
         insee_age_pop = pd.read_parquet(insee_housing_age, filters = criteria)
         insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
         dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
-
+        taxes = pd.read_parquet(local_tax_2022)
 
         #################################### STORING VALUES #######################################################
 
@@ -387,6 +388,20 @@ if launch_button:
         poll_df["Recommandation OMS"] = reco_OMS
         poll_fig = graph_poll(poll_df, city, reco_OMS)
 
+        # TAXES
+        if (insee_city_id[:3] == '132') & (len(insee_city_id) == 5):
+            taxes_city = taxes[taxes["Libellé commune"] == "MARSEILLE"]
+        elif (insee_city_id[:3] == '693') & (len(insee_city_id) == 5):
+            taxes_city = taxes[taxes["Libellé commune"] == "LYON"] 
+        elif (insee_city_id[:3] == '751') & (len(insee_city_id) == 5):
+            taxes_city = taxes[taxes["Libellé commune"] == "VILLE DE PARIS"]
+        else:
+            taxes_city = taxes[taxes["code INSEE"] == insee_city_id]
+        tfb_city = taxes_city["TFB"].values[0]
+        teom_city = taxes_city["TEOM"].values[0]
+        tfb_nat = taxes["TFB"].mean()
+        teom_nat = taxes["TEOM"].mean()
+
         #################################### DISPLAYING DATA #######################################################
 
         st.map(pd.DataFrame({"lat":city_lat, "lon":city_long}, index=[0]))
@@ -526,3 +541,16 @@ if launch_button:
         st.markdown("**Détail des transactions du premier semestre 2023**")
         dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
         st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
+
+        st.subheader("Impôts locaux")
+        st.markdown("*Votés en 2022*")
+
+        item9, item10 = st.columns(2,gap='large')
+        with item9:
+            st.info("Taxe foncière",icon="💶")
+            st.metric(label="Taxe foncière sur les propriétés bâties (TFPB)",value=f"{tfb_city:,.0f} %")
+            st.text(f'Moyenne nationale : {tfb_nat:,.0f} %')
+        with item10:
+            st.info("Taxe d'enlèvement des ordures ménagères",icon="🚮")
+            st.metric(label="TEOM - Taux plein net",value=f"{teom_city:,.0f} %")
+            st.text(f'Moyenne nationale : {teom_nat:,.0f} %')
