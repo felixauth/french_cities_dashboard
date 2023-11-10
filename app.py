@@ -218,387 +218,404 @@ launch_button = st.button("Afficher les données", type="primary")
 
 if launch_button:
 
-    with st.spinner(text="Chargement des données..."):
+    if city is None:
 
-        #################################### LOADING DATA #######################################################
+        st.text('⚠️ Veuillez sélectionner une ville !')
 
-        #Geographic data on selected city
-        insee_city_id = insee_city_name_df[insee_city_name_df["LIB_DEP"] == city]["COM"].iloc[0].lstrip("0")
-        insee_city_dep_name = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_DEP"].iloc[0]
-        insee_city_dep_num = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["DEP"].iloc[0]
-        insee_city_reg = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_REG"].iloc[0]
+    else:
 
-        st.title(f"📌 {city}")
-        st.markdown(f"🗺️ *{insee_city_dep_name} ({insee_city_dep_num}) - {insee_city_reg}*")
-        st.markdown("""___""")
+        with st.spinner(text="Chargement des données..."):
 
-        #Importing summart stats on insee data
-        insee_sum_stats = load_data(insee_data_sum_stat)
-        #Importing data on selected city
-        criteria = [("CODGEO", "==", insee_city_id)]
-        data_combined_enriched = pd.read_parquet(insee_data_file, filters = criteria)
-        cityhall_elec_data = pd.read_parquet(cityhall_elec_data_file, filters = criteria).iloc[0]
-        pres_elec_data = pd.read_parquet(pres_elec_data_file, filters = criteria)
-        insee_hlm_data = pd.read_parquet(insee_hlm, filters = criteria)
-        insee_immigration_data = pd.read_parquet(insee_immigration, filters = criteria)
-        insee_owner_share_data = pd.read_parquet(insee_owner_share, filters = criteria)
-        insee_age_pop = pd.read_parquet(insee_housing_age, filters = criteria)
-        insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
-        dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
-        taxes = pd.read_parquet(local_tax_2022)
-        rental = pd.read_parquet(rental_2022, filters=criteria)
+            #################################### LOADING DATA #######################################################
 
-        #################################### STORING VALUES #######################################################
+            #Geographic data on selected city
+            insee_city_id = insee_city_name_df[insee_city_name_df["LIB_DEP"] == city]["COM"].iloc[0].lstrip("0")
+            insee_city_dep_name = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_DEP"].iloc[0]
+            insee_city_dep_num = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["DEP"].iloc[0]
+            insee_city_reg = insee_city_name_df[insee_city_name_df["LIB_DEP"]== city]["LIBELLE_REG"].iloc[0]
 
-        #Importing data on wheather station
-        data_meteo_preproc_df = pd.read_parquet(wheather_data_2020_2023)
+            st.title(f"📌 {city}")
+            st.markdown(f"🗺️ *{insee_city_dep_name} ({insee_city_dep_num}) - {insee_city_reg}*")
+            st.markdown("""___""")
 
-        #Importing data on pollution
-        data_pollution_df = pd.read_parquet(pollution_data_2023)
+            #Importing summart stats on insee data
+            insee_sum_stats = load_data(insee_data_sum_stat)
+            #Importing data on selected city
+            criteria = [("CODGEO", "==", insee_city_id)]
+            data_combined_enriched = pd.read_parquet(insee_data_file, filters = criteria)
+            cityhall_elec_data = pd.read_parquet(cityhall_elec_data_file, filters = criteria).iloc[0]
+            pres_elec_data = pd.read_parquet(pres_elec_data_file, filters = criteria)
+            insee_hlm_data = pd.read_parquet(insee_hlm, filters = criteria)
+            insee_immigration_data = pd.read_parquet(insee_immigration, filters = criteria)
+            insee_owner_share_data = pd.read_parquet(insee_owner_share, filters = criteria)
+            insee_age_pop = pd.read_parquet(insee_housing_age, filters = criteria)
+            insee_surface = pd.read_parquet(insee_housing_size, filters = criteria)
+            dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
+            taxes = pd.read_parquet(local_tax_2022)
+            rental = pd.read_parquet(rental_2022, filters=criteria)
 
-        #Insee data - Getting the national values for comparison
-        pop_median = insee_sum_stats.loc["Median","P20_POP"]
-        poverty_rate_median = insee_sum_stats.loc["Median","TP6020"]
-        standard_of_living_median = insee_sum_stats.loc["Median","MED20"]
-        principal_residency_median = insee_sum_stats.loc["Median","RP_SHARE"]
-        unemployment_rate_median = insee_sum_stats.loc["Median","CHOM_RATE"]
-        empty_residency_median = insee_sum_stats.loc["Median","LOGVAC_RATE"]
-        
-        #Insee data - Getting the city values
-        # data_city = data_combined_enriched[data_combined_enriched["CODGEO"] == insee_city_id]
-        pop_city = data_combined_enriched["P20_POP"].values[0]
-        pop_growth_city = data_combined_enriched["POP_GROWTH_RATE"].values[0]
-        principal_residency_city = data_combined_enriched["RP_SHARE"].values[0]
-        unemployment_rate_city = data_combined_enriched["CHOM_RATE"].values[0]
-        empty_residency_city = data_combined_enriched["LOGVAC_RATE"].values[0]
-        city_lat = float(data_combined_enriched["latitude"].values[0])
-        city_long  = float(data_combined_enriched["longitude"].values[0])
-        poverty_rate = float(data_combined_enriched["TP6020"].values[0])
-        standard_of_living = float(data_combined_enriched["MED20"].values[0])
+            #################################### STORING VALUES #######################################################
 
-        try:
-            hlm_share = insee_hlm_data["proportion_city"].values[0]
-            hlm_share_nat = insee_hlm_data["proportion_national"].values[0]
-        except IndexError:
-            hlm_share = None
-            hlm_share_nat = None
-        try:
-            immigration_share_nat = insee_immigration_data.query("IMMIM == '1'")["proportion_national"].values[0]
-            immigration_share = insee_immigration_data.query("IMMIM == '1'")["proportion_city"].values[0]
-        except IndexError:
-            immigration_share_nat = None
-            immigration_share = None
-        try:
-            owner_share_nat = insee_owner_share_data["proportion_national"].values[0]
-            owner_share = insee_owner_share_data["proportion_city"].values[0]
-        except IndexError:
-            owner_share_nat = None
-            owner_share = None
+            #Importing data on wheather station
+            data_meteo_preproc_df = pd.read_parquet(wheather_data_2020_2023)
 
-        missing_value_message = "Non communiqué"
+            #Importing data on pollution
+            data_pollution_df = pd.read_parquet(pollution_data_2023)
 
-        #City Hall elections data
-        # city_election_data = cityhall_elec_data[cityhall_elec_data["CODGEO"] == insee_city_id].iloc[0]
-        elected_candidate_surname = cityhall_elec_data["Nom"]
-        elected_candidate_name = cityhall_elec_data["Prénom"]
-        elected_candidate_list = cityhall_elec_data["Liste"]
-        elected_candidate_score = cityhall_elec_data["% Voix/Exp"]
-        election_tour = cityhall_elec_data["Tour"]
-        election_tour_string = "1er tour" if election_tour == 1 else "2ème tour"
+            #Insee data - Getting the national values for comparison
+            pop_median = insee_sum_stats.loc["Median","P20_POP"]
+            poverty_rate_median = insee_sum_stats.loc["Median","TP6020"]
+            standard_of_living_median = insee_sum_stats.loc["Median","MED20"]
+            principal_residency_median = insee_sum_stats.loc["Median","RP_SHARE"]
+            unemployment_rate_median = insee_sum_stats.loc["Median","CHOM_RATE"]
+            empty_residency_median = insee_sum_stats.loc["Median","LOGVAC_RATE"]
+            
+            #Insee data - Getting the city values
+            # data_city = data_combined_enriched[data_combined_enriched["CODGEO"] == insee_city_id]
+            pop_city = data_combined_enriched["P20_POP"].values[0]
+            pop_growth_city = data_combined_enriched["POP_GROWTH_RATE"].values[0]
+            principal_residency_city = data_combined_enriched["RP_SHARE"].values[0]
+            unemployment_rate_city = data_combined_enriched["CHOM_RATE"].values[0]
+            empty_residency_city = data_combined_enriched["LOGVAC_RATE"].values[0]
+            city_lat = float(data_combined_enriched["latitude"].values[0])
+            city_long  = float(data_combined_enriched["longitude"].values[0])
+            poverty_rate = float(data_combined_enriched["TP6020"].values[0])
+            standard_of_living = float(data_combined_enriched["MED20"].values[0])
 
-        #Presidential elections data
-        # pres_election_data_city = pres_elec_data[pres_elec_data["CODGEO"] == insee_city_id]
-        pres_elec_data["Nom_prénom"] = pres_elec_data["Prénom"] + " " + pres_elec_data["Nom"]
-        pres_elec_data_first_round = pres_elec_data.query("Tour == 1")
-        pres_elec_data_second_round = pres_elec_data.query("Tour == 2")
+            try:
+                hlm_share = insee_hlm_data["proportion_city"].values[0]
+                hlm_share_nat = insee_hlm_data["proportion_national"].values[0]
+            except IndexError:
+                hlm_share = None
+                hlm_share_nat = None
+            try:
+                immigration_share_nat = insee_immigration_data.query("IMMIM == '1'")["proportion_national"].values[0]
+                immigration_share = insee_immigration_data.query("IMMIM == '1'")["proportion_city"].values[0]
+            except IndexError:
+                immigration_share_nat = None
+                immigration_share = None
+            try:
+                owner_share_nat = insee_owner_share_data["proportion_national"].values[0]
+                owner_share = insee_owner_share_data["proportion_city"].values[0]
+            except IndexError:
+                owner_share_nat = None
+                owner_share = None
 
-        #Graph age population
-        fig_age_pop = graph_housing(insee_age_pop, city)
+            missing_value_message = "Non communiqué"
 
-        #Graph surface
-        fig_housing_size = graph_housing(insee_surface, city)
+            #City Hall elections data
+            elected_candidate_surname = cityhall_elec_data["Nom"]
+            elected_candidate_name = cityhall_elec_data["Prénom"]
+            elected_candidate_list = cityhall_elec_data["Liste"]
+            elected_candidate_score = cityhall_elec_data["% Voix/Exp"]
+            elected_candidate_color = cityhall_elec_data["bloc_text"]
+            elected_candidate_def = cityhall_elec_data["Definition"]
+            elected_candidate_party = cityhall_elec_data["LibNua"]
+            elected_candidate_nucode = cityhall_elec_data["Code Nuance"]
+            election_tour = cityhall_elec_data["Tour"]
+            election_tour_string = "1er tour" if election_tour == 1 else "2ème tour"
 
-        #Graph tour 1
-        try:
-            fig1, ax1 = plt.subplots(1, figsize=(6, 3))
-            ax1 = sns.barplot(data = pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
-            ax1.set_ylabel("")
-            ax1.set_xlabel("")
-            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
-            score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
-            label = f"{score_percent} %"
-            ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
-            ax1.set_facecolor('white')
-            ax1.set(xticklabels=[])
-        except:
-            fig1="Non communiqué"
+            #Presidential elections data
+            # pres_election_data_city = pres_elec_data[pres_elec_data["CODGEO"] == insee_city_id]
+            pres_elec_data["Nom_prénom"] = pres_elec_data["Prénom"] + " " + pres_elec_data["Nom"]
+            pres_elec_data_first_round = pres_elec_data.query("Tour == 1")
+            pres_elec_data_second_round = pres_elec_data.query("Tour == 2")
 
-        #Graph tour 2
-        try:
-            fig2, ax2 = plt.subplots(1, figsize=(6, 3))
-            ax2 = sns.barplot(data = pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
-            ax2.set_ylabel("")
-            ax2.set_xlabel("")
-            sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
-            score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
-            label = f"{score_percent} %"
-            ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
-            ax2.set_facecolor('white')
-            ax2.set(xticklabels=[])
-        except:
-            fig2="Non communiqué"
+            #Graph age population
+            fig_age_pop = graph_housing(insee_age_pop, city)
 
+            #Graph surface
+            fig_housing_size = graph_housing(insee_surface, city)
 
-        # REAL ESTATE DATA
-        ## price per square meter
-        dvf_preproc_df = dvf_preproc(dvf_2023)
-        dvf_avg = dvf_per_city(dvf_preproc_df)
+            #Graph tour 1
+            try:
+                fig1, ax1 = plt.subplots(1, figsize=(6, 3))
+                ax1 = sns.barplot(data = pres_elec_data_first_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+                ax1.set_ylabel("")
+                ax1.set_xlabel("")
+                sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
+                score_percent = round(pres_elec_data_first_round["% Voix/Exp"] * 100,1).astype(str) + "%"
+                label = f"{score_percent} %"
+                ax1.bar_label(ax1.containers[0], labels = score_percent,fmt='%.f')
+                ax1.set_facecolor('white')
+                ax1.set(xticklabels=[])
+            except:
+                fig1="Non communiqué"
 
-        try:
-            apt_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Appartement","Valeur fonc / surface habitable"].values[0]
-            apt_nb_transac = dvf_preproc_df["Type local"].value_counts()["Appartement"]
-        except IndexError:
-            apt_price_avg = None
-        try:
-            house_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Maison","Valeur fonc / surface habitable"].values[0]
-            house_nb_transac = dvf_preproc_df["Type local"].value_counts()["Maison"]
-        except IndexError:
-            house_price_avg = None
-
-        ## rental
-        try:
-            type_r = 'apt'
-            rental_apt_city = rental.loc[
-                rental["type"] == type_r,
-                "loypredm2"].values[0]
-            rental_nobs_apt_city = rental.loc[
-                rental["type"] == type_r,
-                "nbobs_com"].values[0]
-        except IndexError:
-            rental_apt_city = None
-        try:
-            type_r = 'house'
-            rental_house_city = rental.loc[
-                rental["type"] == type_r,
-                "loypredm2"].values[0]
-            rental_nobs_house_city = rental.loc[
-                rental["type"] == type_r,
-                "nbobs_com"].values[0]
-        except IndexError:
-            rental_house_city = None
+            #Graph tour 2
+            try:
+                fig2, ax2 = plt.subplots(1, figsize=(6, 3))
+                ax2 = sns.barplot(data = pres_elec_data_second_round,x='% Voix/Exp',y='Nom_prénom', palette="rocket", orient='h')
+                ax2.set_ylabel("")
+                ax2.set_xlabel("")
+                sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=False)
+                score_percent = round(pres_elec_data_second_round["% Voix/Exp"] * 100,1).astype(str) + "%"
+                label = f"{score_percent} %"
+                ax2.bar_label(ax2.containers[0], labels = score_percent,fmt='%.f')
+                ax2.set_facecolor('white')
+                ax2.set(xticklabels=[])
+            except:
+                fig2="Non communiqué"
 
 
-        # WHEATHER DATA
-        stations_coord = wheather_station_list(data_meteo_preproc_df)
-        closest_station = find_closest_station(stations_coord, (city_lat, city_long))
-        closest_station_name = stations_coord[stations_coord["numer_sta"] == closest_station]["nom_epci"].values[0]
-        data_meteo_city = data_meteo_preproc_df.query("numer_sta == @closest_station").reset_index(drop=True)
-        temp_city = temp_by_season(data_meteo_city)
-        data_meteo_nat = data_meteo_national_avg(data_meteo_preproc_df)
-        pluvio_avg_city = pluvio_moyenne(data_meteo_city)
-        pluvio_avg_nat = pluvio_moyenne(data_meteo_nat)
-        pluvio_df = pd.merge(pluvio_avg_city, pluvio_avg_nat, how="left", on=["month","month_name"], suffixes=('_city', '_nat'))\
-                            .rename(columns={"precipitations_3h_city": city,"precipitations_3h_nat":"Moy. villes françaises"})
-        pluvio_fig = graph_pluvio(pluvio_df, city)
+            # REAL ESTATE DATA
+            ## price per square meter
+            dvf_preproc_df = dvf_preproc(dvf_2023)
+            dvf_avg = dvf_per_city(dvf_preproc_df)
 
-        # POLLUTION DATA
-        poll_station_coord = pollution_station_list(data_pollution_df)
-        poll_closest_station = find_closest_station(poll_station_coord, (city_lat, city_long))
-        poll_zas_name, poll_site_name = poll_station_coord[poll_station_coord["numer_sta"] == poll_closest_station]["Zas"].values[0], poll_station_coord[poll_station_coord["numer_sta"] == poll_closest_station]["nom site"].values[0]
-        poll_data_city = data_pollution_df[data_pollution_df["code site"] == poll_closest_station].reset_index(drop=True)
-        poll_avg_city = poll_data_city.groupby("date_clean", as_index=False)["valeur"].mean().reset_index(drop=True)
-        poll_avg_nat = data_pollution_df.groupby("date_clean", as_index=False)["valeur"].mean().reset_index(drop=True)
-        poll_df = pd.merge(poll_avg_city, poll_avg_nat, how="left", on=["date_clean"], suffixes=('_city', '_nat'))\
-                            .rename(columns={"valeur_city": city,"valeur_nat":"Moy. nationale"})
-        reco_OMS = 15
-        poll_df["Recommandation OMS"] = reco_OMS
-        poll_fig = graph_poll(poll_df, city, reco_OMS)
+            try:
+                apt_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Appartement","Valeur fonc / surface habitable"].values[0]
+                apt_nb_transac = dvf_preproc_df["Type local"].value_counts()["Appartement"]
+            except IndexError:
+                apt_price_avg = None
+            try:
+                house_price_avg = dvf_avg.loc[dvf_avg["Type local"] == "Maison","Valeur fonc / surface habitable"].values[0]
+                house_nb_transac = dvf_preproc_df["Type local"].value_counts()["Maison"]
+            except IndexError:
+                house_price_avg = None
 
-        # TAXES
-        if (insee_city_id[:3] == '132') & (len(insee_city_id) == 5):
-            taxes_city = taxes[taxes["Libellé commune"] == "MARSEILLE"]
-        elif (insee_city_id[:3] == '693') & (len(insee_city_id) == 5):
-            taxes_city = taxes[taxes["Libellé commune"] == "LYON"] 
-        elif (insee_city_id[:3] == '751') & (len(insee_city_id) == 5):
-            taxes_city = taxes[taxes["Libellé commune"] == "VILLE DE PARIS"]
-        else:
-            taxes_city = taxes[taxes["code INSEE"] == insee_city_id]
-        tfb_city = taxes_city["TFB"].values[0]
-        teom_city = taxes_city["TEOM"].values[0]
-        tfb_nat = taxes["TFB"].mean()
-        teom_nat = taxes["TEOM"].mean()
+            ## rental
+            try:
+                type_r = 'apt'
+                rental_apt_city = rental.loc[
+                    rental["type"] == type_r,
+                    "loypredm2"].values[0]
+                rental_nobs_apt_city = rental.loc[
+                    rental["type"] == type_r,
+                    "nbobs_com"].values[0]
+            except IndexError:
+                rental_apt_city = None
+            try:
+                type_r = 'house'
+                rental_house_city = rental.loc[
+                    rental["type"] == type_r,
+                    "loypredm2"].values[0]
+                rental_nobs_house_city = rental.loc[
+                    rental["type"] == type_r,
+                    "nbobs_com"].values[0]
+            except IndexError:
+                rental_house_city = None
 
-        #################################### DISPLAYING DATA #######################################################
 
-        st.map(pd.DataFrame({"lat":city_lat, "lon":city_long}, index=[0]))
+            # WHEATHER DATA
+            stations_coord = wheather_station_list(data_meteo_preproc_df)
+            closest_station = find_closest_station(stations_coord, (city_lat, city_long))
+            closest_station_name = stations_coord[stations_coord["numer_sta"] == closest_station]["nom_epci"].values[0]
+            data_meteo_city = data_meteo_preproc_df.query("numer_sta == @closest_station").reset_index(drop=True)
+            temp_city = temp_by_season(data_meteo_city)
+            data_meteo_nat = data_meteo_national_avg(data_meteo_preproc_df)
+            pluvio_avg_city = pluvio_moyenne(data_meteo_city)
+            pluvio_avg_nat = pluvio_moyenne(data_meteo_nat)
+            pluvio_df = pd.merge(pluvio_avg_city, pluvio_avg_nat, how="left", on=["month","month_name"], suffixes=('_city', '_nat'))\
+                                .rename(columns={"precipitations_3h_city": city,"precipitations_3h_nat":"Moy. villes françaises"})
+            pluvio_fig = graph_pluvio(pluvio_df, city)
 
-        st.markdown("""___""")
+            # POLLUTION DATA
+            poll_station_coord = pollution_station_list(data_pollution_df)
+            poll_closest_station = find_closest_station(poll_station_coord, (city_lat, city_long))
+            poll_zas_name, poll_site_name = poll_station_coord[poll_station_coord["numer_sta"] == poll_closest_station]["Zas"].values[0], poll_station_coord[poll_station_coord["numer_sta"] == poll_closest_station]["nom site"].values[0]
+            poll_data_city = data_pollution_df[data_pollution_df["code site"] == poll_closest_station].reset_index(drop=True)
+            poll_avg_city = poll_data_city.groupby("date_clean", as_index=False)["valeur"].mean().reset_index(drop=True)
+            poll_avg_nat = data_pollution_df.groupby("date_clean", as_index=False)["valeur"].mean().reset_index(drop=True)
+            poll_df = pd.merge(poll_avg_city, poll_avg_nat, how="left", on=["date_clean"], suffixes=('_city', '_nat'))\
+                                .rename(columns={"valeur_city": city,"valeur_nat":"Moy. nationale"})
+            reco_OMS = 15
+            poll_df["Recommandation OMS"] = reco_OMS
+            poll_fig = graph_poll(poll_df, city, reco_OMS)
 
-        st.subheader("🌡️ Températures")
-        st.caption("Moyenne 2020-2023")
-        temp1, temp2, temp3, temp4=st.columns(4,gap='large')
-        with temp1:
-                st.metric(label="☀️ Eté", value=f"{round(temp_city['été'], 1)} °C")
-        with temp2:
-                st.metric(label="🍂 Automne", value=f"{round(temp_city['automne'], 1)} °C")
-        with temp3:
-                st.metric(label="❄️ Hiver", value=f"{round(temp_city['hiver'], 1)} °C")
-        with temp4:
-                st.metric(label="🌼 Printemps", value=f"{round(temp_city['printemps'], 1)} °C")
+            # TAXES
+            if (insee_city_id[:3] == '132') & (len(insee_city_id) == 5):
+                taxes_city = taxes[taxes["Libellé commune"] == "MARSEILLE"]
+            elif (insee_city_id[:3] == '693') & (len(insee_city_id) == 5):
+                taxes_city = taxes[taxes["Libellé commune"] == "LYON"] 
+            elif (insee_city_id[:3] == '751') & (len(insee_city_id) == 5):
+                taxes_city = taxes[taxes["Libellé commune"] == "VILLE DE PARIS"]
+            else:
+                taxes_city = taxes[taxes["code INSEE"] == insee_city_id]
+            tfb_city = taxes_city["TFB"].values[0]
+            teom_city = taxes_city["TEOM"].values[0]
+            tfb_nat = taxes["TFB"].mean()
+            teom_nat = taxes["TEOM"].mean()
 
-        st.write("##")
-        st.subheader("🌧️ Pluviométrie")
-        st.caption("Moyenne 2020-2023")
-        st.write(pluvio_fig)
-        st.caption(f"Station de mesure : **{closest_station_name}**")
-                   
-        st.write("##")
-        st.subheader("🏭 Pollution")
-        st.caption(f"Niveau de particules fines (< 2.5 µg/m3) - Mesuré sur le site : {poll_zas_name} - {poll_site_name}")
-        st.write(poll_fig)
-        st.markdown("💡 Les particules fines, ou PM2.5, sont émises principalement lors des phénomènes de combustion et altèrent la santé respiratoire et cardiovasculaire")
-        st.markdown("💡 L'OMS recommande de ne pas dépasser **5 µg/m3 de concentration moyenne par an** et **15 µg/m3 de concentration moyenne par jour** (i.e 3 à 4 jours de dépassement par an) ")
-        st.caption("**Source :** 'WHO 2021 Air quality guidelines: Global update 2021'")
+            #################################### DISPLAYING DATA #######################################################
 
-        st.markdown("""___""")
+            st.map(pd.DataFrame({"lat":city_lat, "lon":city_long}, index=[0]))
 
-        st.subheader("📋 Recensement 2020")
+            st.markdown("""___""")
 
-        total1, total2, total3=st.columns(3,gap='large')
-        with total1:
-                st.info('Population',icon="👫")
-                st.metric(label="Nb habitants",value=f"{pop_city:,.0f}".replace(","," "),delta=f"{pop_growth_city * 100:,.0f} % vs 2014")
-        with total2:
-                st.info('Taux de pauvreté 2020',icon="💰")
-                metric_label = "Taux pauvreté"
-                if pd.isna(poverty_rate):
-                    st.metric(label=metric_label,value=missing_value_message)
-                else:
-                    st.metric(label=metric_label,value=f"{poverty_rate:,.0f} %")
-                st.text(f'France entière: {poverty_rate_median:,.0f} %')
-        with total3:
-                st.info('Taux de chômage',icon="👔")
-                metric_label = "Nb chômeurs / Population active"
-                if pd.isna(unemployment_rate_city):
-                    st.metric(label=metric_label,value=missing_value_message)
-                else:
-                    st.metric(label=metric_label,value=f"{unemployment_rate_city * 100:,.0f} %")
-                st.text(f'France entière: {unemployment_rate_median * 100:,.0f} %')
+            st.subheader("🌡️ Températures")
+            st.caption("Moyenne 2020-2023")
+            temp1, temp2, temp3, temp4=st.columns(4,gap='large')
+            with temp1:
+                    st.metric(label="☀️ Eté", value=f"{round(temp_city['été'], 1)} °C")
+            with temp2:
+                    st.metric(label="🍂 Automne", value=f"{round(temp_city['automne'], 1)} °C")
+            with temp3:
+                    st.metric(label="❄️ Hiver", value=f"{round(temp_city['hiver'], 1)} °C")
+            with temp4:
+                    st.metric(label="🌼 Printemps", value=f"{round(temp_city['printemps'], 1)} °C")
 
-        total4, total5, total6=st.columns(3,gap='large')
-        with total4:
-                st.info('Part de HLM',icon="🏢")
-                metric_label = "Nb HLM / Nb total logements"
-                if pd.isna(hlm_share):
-                    st.metric(label=metric_label,value=missing_value_message)
-                else:
-                    st.metric(label=metric_label,value=f"{hlm_share * 100:,.0f} %")
-                    st.text(f'France entière : {hlm_share_nat * 100:,.0f} %')
-        with total5:
-                st.info('Part de propriétaires',icon="🔑")
-                metric_label = "Nb propriétaires / Nb total logements"
-                if pd.isna(owner_share):
-                    st.metric(label=metric_label,value=missing_value_message)
-                else:
-                    st.metric(label=metric_label,value=f"{owner_share * 100:,.0f} %")
-                    st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
-        with total6:
-                st.info("Part d'immigrés",icon="🌏")
-                metric_label = "Nb immigrés / Population"
-                if pd.isna(immigration_share):
-                    st.metric(label=metric_label,value=missing_value_message)
-                else:
-                    st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
-                    st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
+            st.write("##")
+            st.subheader("🌧️ Pluviométrie")
+            st.caption("Moyenne 2020-2023")
+            st.write(pluvio_fig)
+            st.caption(f"Station de mesure : **{closest_station_name}**")
+                    
+            st.write("##")
+            st.subheader("🏭 Pollution")
+            st.caption(f"Niveau de particules fines (< 2.5 µg/m3) - Mesuré sur le site : {poll_zas_name} - {poll_site_name}")
+            st.write(poll_fig)
+            st.markdown("💡 Les particules fines, ou PM2.5, sont émises principalement lors des phénomènes de combustion et altèrent la santé respiratoire et cardiovasculaire")
+            st.markdown("💡 L'OMS recommande de ne pas dépasser **5 µg/m3 de concentration moyenne par an** et **15 µg/m3 de concentration moyenne par jour** (i.e 3 à 4 jours de dépassement par an) ")
+            st.caption("**Source :** 'WHO 2021 Air quality guidelines: Global update 2021'")
 
-        total7, total8=st.columns(2,gap='large')
-        with total7:
-            st.info('Age du référent du ménage',icon="👴🏼")
-            st.write(fig_age_pop)
-        with total8:
-            st.info('Taille des logements',icon="📐")
-            st.write(fig_housing_size)
-        
-        st.write("##")
-        st.caption("**Source :** INSEE | 2020")
+            st.markdown("""___""")
 
-        st.markdown("""---""")
-        st.subheader("Résultat aux élections municipales de 2020")
+            st.subheader("📋 Recensement 2020")
 
-        item3, item4 = st.columns((1,8), gap='small')
-        with item3:
-            image = Image.open('processed_data/interpro_Maire.png')
-            st.image(image, width=140)
-        with item4:
-            st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
-            st.caption(f"Elu(e) au {election_tour_string}")
-            st.caption(f"**Score :** {elected_candidate_score * 100:,.1f} %")
-            st.caption(f"**Liste :** {elected_candidate_list}")
+            total1, total2, total3=st.columns(3,gap='large')
+            with total1:
+                    st.info('Population',icon="👫")
+                    st.metric(label="Nb habitants",value=f"{pop_city:,.0f}".replace(","," "),delta=f"{pop_growth_city * 100:,.0f} % vs 2014")
+            with total2:
+                    st.info('Taux de pauvreté 2020',icon="💰")
+                    metric_label = "Taux pauvreté"
+                    if pd.isna(poverty_rate):
+                        st.metric(label=metric_label,value=missing_value_message)
+                    else:
+                        st.metric(label=metric_label,value=f"{poverty_rate:,.0f} %")
+                    st.text(f'France entière: {poverty_rate_median:,.0f} %')
+            with total3:
+                    st.info('Taux de chômage',icon="👔")
+                    metric_label = "Nb chômeurs / Population active"
+                    if pd.isna(unemployment_rate_city):
+                        st.metric(label=metric_label,value=missing_value_message)
+                    else:
+                        st.metric(label=metric_label,value=f"{unemployment_rate_city * 100:,.0f} %")
+                    st.text(f'France entière: {unemployment_rate_median * 100:,.0f} %')
 
-        st.write("##")
-        st.subheader("Résultat aux élections présidentielles de 2022")
+            total4, total5, total6=st.columns(3,gap='large')
+            with total4:
+                    st.info('Part de HLM',icon="🏢")
+                    metric_label = "Nb HLM / Nb total logements"
+                    if pd.isna(hlm_share):
+                        st.metric(label=metric_label,value=missing_value_message)
+                    else:
+                        st.metric(label=metric_label,value=f"{hlm_share * 100:,.0f} %")
+                        st.text(f'France entière : {hlm_share_nat * 100:,.0f} %')
+            with total5:
+                    st.info('Part de propriétaires',icon="🔑")
+                    metric_label = "Nb propriétaires / Nb total logements"
+                    if pd.isna(owner_share):
+                        st.metric(label=metric_label,value=missing_value_message)
+                    else:
+                        st.metric(label=metric_label,value=f"{owner_share * 100:,.0f} %")
+                        st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
+            with total6:
+                    st.info("Part d'immigrés",icon="🌏")
+                    metric_label = "Nb immigrés / Population"
+                    if pd.isna(immigration_share):
+                        st.metric(label=metric_label,value=missing_value_message)
+                    else:
+                        st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
+                        st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
 
-        item5, item6 = st.columns(2,gap='large')
-        with item5:
-            st.markdown("#### Premier tour")
-            st.write(fig1)
-        with item6:
-            st.markdown("#### Second tour")
-            st.write(fig2)
+            total7, total8=st.columns(2,gap='large')
+            with total7:
+                st.info('Age du référent du ménage',icon="👴🏼")
+                st.write(fig_age_pop)
+            with total8:
+                st.info('Taille des logements',icon="📐")
+                st.write(fig_housing_size)
+            
+            st.write("##")
+            st.caption("**Source :** INSEE | 2020")
 
-        st.markdown("""___""")
+            st.markdown("""---""")
+            st.subheader("Résultat aux élections municipales de 2020")
 
-        st.subheader("Prix immobilier")
-        st.markdown("*Moyenne des transactions du premier semestre 2023*")
+            dict_color_pol = {"Extrême Gauche": '🔴',
+                "Gauche":'🟠',
+                "Divers":'🟢',
+                "Centre": '⚪️',
+                "Droite":'🔵',
+                "Extrême Droite": '⚫️'}
+            pol3, pol4 = st.columns((1,8), gap='small')
+            with pol3:
+                image = Image.open('processed_data/interpro_Maire.png')
+                st.image(image, width=140)
+            with pol4:
+                st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
+                st.caption(f"Elu(e) au {election_tour_string} | **Score :** {elected_candidate_score * 100:,.1f} %")
+                st.caption(f"**Liste :** {elected_candidate_list}")
+                st.caption(f"**Parti associé :** {elected_candidate_party}" if elected_candidate_nucode != 'NC' else 'Sans étiquette')
+                st.caption(f"**Bloc :** {elected_candidate_color} {dict_color_pol[elected_candidate_color]}" if elected_candidate_nucode != 'NC' else '')
+            
 
-        item7, item8 = st.columns(2,gap='large')
-        with item7:
-            st.info("Appartements",icon="🏬")
-            st.metric(label="Valeur foncière / Surface habitable",value=f"{apt_price_avg:,.0f} €/m²".replace(","," ") if apt_price_avg else "Aucune transaction")
-            if apt_price_avg:
-                st.text(f"Nb transactions : {apt_nb_transac}")
-        with item8:
-            st.info("Maisons",icon="🏚️")
-            st.metric(label="Valeur foncière / Surface habitable",value=f"{house_price_avg:,.0f} €/m²".replace(","," ") if house_price_avg else "Aucune transaction")
-            if house_price_avg:
-                st.text(f"Nb transactions : {house_nb_transac}")
+            st.write("##")
+            st.subheader("Résultat aux élections présidentielles de 2022")
 
-        st.write("##")
+            item5, item6 = st.columns(2,gap='large')
+            with item5:
+                st.markdown("#### Premier tour")
+                st.write(fig1)
+            with item6:
+                st.markdown("#### Second tour")
+                st.write(fig2)
 
-        st.markdown("**Détail des transactions du premier semestre 2023**")
-        dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
-        st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
+            st.markdown("""___""")
 
-        st.write("##")
+            st.subheader("Prix immobilier")
+            st.markdown("*Moyenne des transactions du premier semestre 2023*")
 
-        st.subheader("Loyer moyen")
-        st.markdown("*Moyenne du T3 2022*")
+            item7, item8 = st.columns(2,gap='large')
+            with item7:
+                st.info("Appartements",icon="🏬")
+                st.metric(label="Valeur foncière / Surface habitable",value=f"{apt_price_avg:,.0f} €/m²".replace(","," ") if apt_price_avg else "Aucune transaction")
+                if apt_price_avg:
+                    st.text(f"Nb transactions : {apt_nb_transac}")
+            with item8:
+                st.info("Maisons",icon="🏚️")
+                st.metric(label="Valeur foncière / Surface habitable",value=f"{house_price_avg:,.0f} €/m²".replace(","," ") if house_price_avg else "Aucune transaction")
+                if house_price_avg:
+                    st.text(f"Nb transactions : {house_nb_transac}")
 
-        rent1, rent2 = st.columns(2,gap='large')
-        with rent1:
-            st.info("Appartements",icon="🏬")
-            st.metric(label="Loyer d'annonce charges comprises pour un non meublé",value=f"{rental_apt_city:,.0f} €/m²" if rental_apt_city else "Aucune annonce")
-            if rental_apt_city:
-                st.text(f"Nb annonces : {rental_nobs_apt_city}")
-        with rent2:
-            st.info("Maisons",icon="🏚️")
-            st.metric(label="Loyer d'annonce charges comprises pour un non meublé",value=f"{rental_house_city:,.0f} €/m²" if rental_house_city else "Aucune annonce")
-            if rental_house_city:
-                st.text(f"Nb annonces : {rental_nobs_house_city}")
+            st.write("##")
 
-        st.markdown("💡 *Les indicateurs de loyer sont calculés par l'Agence Nationale pour l'Information sur le Logement (ANIL), grâce à l'utilisation des données d'annonces parues sur Leboncoin et SeLoger au T3 2022*")
+            st.markdown("**Détail des transactions du premier semestre 2023**")
+            dvf_2023_clean = dvf_preproc_df.drop(columns=["CODGEO"]).reset_index(drop=True)
+            st.dataframe(dvf_2023_clean, hide_index=True, width=1500)
 
-        st.write("##")
+            st.write("##")
 
-        st.subheader("Impôts locaux")
-        st.markdown("*Votés en 2022*")
+            st.subheader("Loyer moyen")
+            st.markdown("*Moyenne du T3 2022*")
 
-        item9, item10 = st.columns(2,gap='large')
-        with item9:
-            st.info("Taxe foncière",icon="💶")
-            st.metric(label="Taxe foncière sur les propriétés bâties (TFPB)",value=f"{tfb_city:,.0f} %")
-            st.text(f'Moyenne nationale : {tfb_nat:,.0f} %')
-        with item10:
-            st.info("Taxe d'enlèvement des ordures ménagères",icon="🗑️")
-            st.metric(label="TEOM - Taux plein net",value=f"{teom_city:,.0f} %")
-            st.text(f'Moyenne nationale : {teom_nat:,.0f} %')
+            rent1, rent2 = st.columns(2,gap='large')
+            with rent1:
+                st.info("Appartements",icon="🏬")
+                st.metric(label="Loyer d'annonce charges comprises pour un non meublé",value=f"{rental_apt_city:,.0f} €/m²" if rental_apt_city else "Aucune annonce")
+                if rental_apt_city:
+                    st.text(f"Nb annonces : {rental_nobs_apt_city}")
+            with rent2:
+                st.info("Maisons",icon="🏚️")
+                st.metric(label="Loyer d'annonce charges comprises pour un non meublé",value=f"{rental_house_city:,.0f} €/m²" if rental_house_city else "Aucune annonce")
+                if rental_house_city:
+                    st.text(f"Nb annonces : {rental_nobs_house_city}")
+
+            st.markdown("💡 *Les indicateurs de loyer sont calculés par l'Agence Nationale pour l'Information sur le Logement (ANIL), grâce à l'utilisation des données d'annonces parues sur Leboncoin et SeLoger au T3 2022*")
+
+            st.write("##")
+
+            st.subheader("Impôts locaux")
+            st.markdown("*Votés en 2022*")
+
+            item9, item10 = st.columns(2,gap='large')
+            with item9:
+                st.info("Taxe foncière",icon="💶")
+                st.metric(label="Taxe foncière sur les propriétés bâties (TFPB)",value=f"{tfb_city:,.0f} %")
+                st.text(f'Moyenne nationale : {tfb_nat:,.0f} %')
+            with item10:
+                st.info("Taxe d'enlèvement des ordures ménagères",icon="🗑️")
+                st.metric(label="TEOM - Taux plein net",value=f"{teom_city:,.0f} %")
+                st.text(f'Moyenne nationale : {teom_nat:,.0f} %')
