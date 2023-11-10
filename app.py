@@ -548,7 +548,7 @@ if launch_button:
                 st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
                 st.caption(f"Elu(e) au {election_tour_string} | **Score :** {elected_candidate_score * 100:,.1f} %")
                 st.caption(f"**Liste :** {elected_candidate_list}")
-                st.caption(f"**Parti associé :** {elected_candidate_party}" if elected_candidate_nucode != 'NC' else 'Sans étiquette')
+                st.caption(f"**Parti ou mouvement associé :** {elected_candidate_party}" if elected_candidate_nucode != 'NC' else 'Sans étiquette')
                 st.caption(f"**Bloc :** {elected_candidate_color} {dict_color_pol[elected_candidate_color]}" if elected_candidate_nucode != 'NC' else '')
             
 
