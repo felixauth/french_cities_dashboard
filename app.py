@@ -555,6 +555,8 @@ if launch_button:
             for col in binary_col:
                  schools_data[col] = replace_checkmark(schools_data[col])
 
+            schools_data["nom_commune"] = city
+
             tab1, tab2, tab3, tab4 = st.tabs(["Ecoles", "Collèges", "Lycées", "Autres"])
             with tab1:
                  data_ec = schools_data.query("type_etablissement == 'Ecole'").drop(columns=[
@@ -569,7 +571,10 @@ if launch_button:
                     "hebergement",
                     "libelle_nature",
                     "taux_brut_de_reussite_total_series",
-                    "taux_mention_brut_toutes_series"
+                    "taux_mention_brut_toutes_series",
+                    "taux_reussite_brevet_general",
+                    "taux_reussite_brevet_professionnel",
+                    "taux_mention_brevet_general"
                  ])
                  st.dataframe(data_ec, hide_index=True)
             with tab2:
@@ -591,7 +596,10 @@ if launch_button:
                     "CODGEO",
                     "identifiant_de_l_etablissement",
                     "ecole_maternelle",
-                    "ecole_elementaire"
+                    "ecole_elementaire",
+                    "taux_reussite_brevet_general",
+                    "taux_reussite_brevet_professionnel",
+                    "taux_mention_brevet_general"
                  ])
                  st.dataframe(data_lyc, hide_index=True)
             with tab4:
