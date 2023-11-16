@@ -89,7 +89,7 @@ def pollution_station_list(data_pollution_df):
             .sort_values(by=["nom site"])\
                 .reset_index(drop=True)\
                     .rename(columns={"code site":"numer_sta"})
-    
+
     return stations_coord
 
 def find_closest_station(station_df, coordinates: tuple):
@@ -160,6 +160,10 @@ def graph_poll(data_poll, city, reco_OMS):
     ax.annotate("Seuil journalier recommandé par l'OMS", xy = (pd.to_datetime('2023-01-15'), reco_OMS), xytext=(pd.to_datetime('2023-01-04'), reco_OMS + 0.5), color='red')
     return fig
 
+def replace_checkmark(data: pd.Series):
+     data_checkmark = data.replace(1,"✔️").replace(0,"❌")
+     return data_checkmark
+
 #################################### WELCOME PAGE #######################################################
 
 st.set_page_config(
@@ -197,6 +201,7 @@ wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
 pollution_data_2023 = os.path.join(folder,"2023_pollution.parquet.gzip")
 local_tax_2022 = os.path.join(folder, "2022_local_taxes.parquet.gzip")
 rental_2022 = os.path.join(folder, "2022_rental_indices.parquet.gzip")
+schools = os.path.join(folder, "schools_data.parquet.gzip")
 
 insee_city_name_df = load_data(insee_city_name_id)
 
@@ -253,6 +258,7 @@ if launch_button:
             dvf_2023 = pd.read_parquet(real_estate_2023, filters = criteria)
             taxes = pd.read_parquet(local_tax_2022)
             rental = pd.read_parquet(rental_2022, filters=criteria)
+            schools_data = pd.read_parquet(schools, filters=criteria)
 
             #################################### STORING VALUES #######################################################
 
@@ -269,7 +275,7 @@ if launch_button:
             principal_residency_median = insee_sum_stats.loc["Median","RP_SHARE"]
             unemployment_rate_median = insee_sum_stats.loc["Median","CHOM_RATE"]
             empty_residency_median = insee_sum_stats.loc["Median","LOGVAC_RATE"]
-            
+
             #Insee data - Getting the city values
             # data_city = data_combined_enriched[data_combined_enriched["CODGEO"] == insee_city_id]
             pop_city = data_combined_enriched["P20_POP"].values[0]
@@ -427,7 +433,7 @@ if launch_button:
             if (insee_city_id[:3] == '132') & (len(insee_city_id) == 5):
                 taxes_city = taxes[taxes["Libellé commune"] == "MARSEILLE"]
             elif (insee_city_id[:3] == '693') & (len(insee_city_id) == 5):
-                taxes_city = taxes[taxes["Libellé commune"] == "LYON"] 
+                taxes_city = taxes[taxes["Libellé commune"] == "LYON"]
             elif (insee_city_id[:3] == '751') & (len(insee_city_id) == 5):
                 taxes_city = taxes[taxes["Libellé commune"] == "VILLE DE PARIS"]
             else:
@@ -460,7 +466,7 @@ if launch_button:
             st.caption("Moyenne 2020-2023")
             st.write(pluvio_fig)
             st.caption(f"Station de mesure : **{closest_station_name}**")
-                    
+
             st.write("##")
             st.subheader("🏭 Pollution")
             st.caption(f"Niveau de particules fines (< 2.5 µg/m3) - Mesuré sur le site : {poll_zas_name} - {poll_site_name}")
@@ -527,9 +533,76 @@ if launch_button:
             with total8:
                 st.info('Taille des logements',icon="📐")
                 st.write(fig_housing_size)
-            
+
             st.write("##")
             st.caption("**Source :** INSEE | 2020")
+
+            st.markdown("""___""")
+
+            st.subheader("Education")
+
+            binary_col = [
+                "ecole_maternelle",
+                "ecole_elementaire",
+                "voie_generale",
+                "voie_technologique",
+                "voie_professionnelle",
+                "section_internationale",
+                "section_europeenne",
+                "segpa",
+                "restauration",
+                "hebergement"]
+            for col in binary_col:
+                 schools_data[col] = replace_checkmark(schools_data[col])
+
+            tab1, tab2, tab3, tab4 = st.tabs(["Ecoles", "Collèges", "Lycées", "Autres"])
+            with tab1:
+                 data_ec = schools_data.query("type_etablissement == 'Ecole'").drop(columns=[
+                    "CODGEO",
+                    "identifiant_de_l_etablissement",
+                    "voie_generale",
+                    "voie_technologique",
+                    "voie_professionnelle",
+                    "section_internationale",
+                    "section_europeenne",
+                    "segpa",
+                    "hebergement",
+                    "libelle_nature",
+                    "taux_brut_de_reussite_total_series",
+                    "taux_mention_brut_toutes_series"
+                 ])
+                 st.dataframe(data_ec, hide_index=True)
+            with tab2:
+                 data_col = schools_data.query("type_etablissement == 'Collège'").drop(columns=[
+                    "CODGEO",
+                    "identifiant_de_l_etablissement",
+                    "ecole_maternelle",
+                    "ecole_elementaire",
+                    "voie_generale",
+                    "voie_technologique",
+                    "voie_professionnelle",
+                    "libelle_nature",
+                    "taux_brut_de_reussite_total_series",
+                    "taux_mention_brut_toutes_series"
+                 ])
+                 st.dataframe(data_col, hide_index=True)
+            with tab3:
+                 data_lyc = schools_data.query("type_etablissement == 'Lycée'").drop(columns=[
+                    "CODGEO",
+                    "identifiant_de_l_etablissement",
+                    "ecole_maternelle",
+                    "ecole_elementaire"
+                 ])
+                 st.dataframe(data_lyc, hide_index=True)
+            with tab4:
+                 data_autre = schools_data.query("type_etablissement == 'Autre'").drop(columns=[
+                    "CODGEO",
+                    "identifiant_de_l_etablissement"
+                 ])
+                 st.dataframe(data_autre, hide_index=True)
+
+            st.write("##")
+            st.caption("**Source :** Ministère de l'Education Nationale et de la Jeunesse | 2022")
 
             st.markdown("""---""")
             st.subheader("Résultat aux élections municipales de 2020")
@@ -548,8 +621,8 @@ if launch_button:
                 st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
                 st.caption(f"Elu(e) au {election_tour_string} | **Score :** {elected_candidate_score * 100:,.1f} % | **Liste :** {elected_candidate_list}")
                 st.caption(f"**Parti ou mouvement associé :** {elected_candidate_party}" if elected_candidate_nucode != 'NC' else 'Sans étiquette')
-                st.caption(f"**Bloc :** {elected_candidate_color} {dict_color_pol[elected_candidate_color]}" if elected_candidate_nucode != 'NC' else '')
-            
+                st.caption(f"**Bloc :** {elected_candidate_color} {dict_color_pol[elected_candidate_color]}" if elected_candidate_color is not None else '')
+
 
             st.write("##")
             st.subheader("Résultat aux élections présidentielles de 2022")
