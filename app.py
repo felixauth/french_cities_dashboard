@@ -500,7 +500,7 @@ if launch_button:
                         st.metric(label=metric_label,value=f"{unemployment_rate_city * 100:,.0f} %")
                     st.text(f'France entière: {unemployment_rate_median * 100:,.0f} %')
 
-            total4, total5, total6=st.columns(3,gap='large')
+            total4, total5 =st.columns(2,gap='large')
             with total4:
                     st.info('Part de HLM',icon="🏢")
                     metric_label = "Nb HLM / Nb total logements"
@@ -517,15 +517,7 @@ if launch_button:
                     else:
                         st.metric(label=metric_label,value=f"{owner_share * 100:,.0f} %")
                         st.text(f'France entière : {owner_share_nat * 100:,.0f} %')
-            with total6:
-                    st.info("Part d'immigrés",icon="🌏")
-                    metric_label = "Nb immigrés / Population"
-                    if pd.isna(immigration_share):
-                        st.metric(label=metric_label,value=missing_value_message)
-                    else:
-                        st.metric(label="Nb immigrés / Nb population",value=f"{immigration_share * 100:,.0f} %")
-                        st.text(f'France entière : {immigration_share_nat * 100:,.0f} %')
-
+                        
             total7, total8=st.columns(2,gap='large')
             with total7:
                 st.info('Age du référent du ménage',icon="👴🏼")
