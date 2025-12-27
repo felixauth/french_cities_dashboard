@@ -1,171 +1,28 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import streamlit as st
+from PIL import Image
 import seaborn as sns
 import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
-from PIL import Image
-import plotly.graph_objects as go
-import plotly.graph_objs as go
-import plotly.express as px
-import geopy.distance
-import os
-import calendar
+
+# new modular imports
+from constants import FILES, DICT_COLOR_POL, FOLDER
+from utils.data import (
+    load_data,
+    dvf_preproc,
+    dvf_per_city,
+    wheather_station_list,
+    pollution_station_list,
+    find_closest_station,
+    temp_by_season,
+    data_meteo_national_avg,
+    pluvio_moyenne,
+    replace_checkmark,
+)
+from utils.plots import graph_housing, graph_pluvio, graph_poll
 
 #################################### FUNCTIONS #######################################################
 
-@st.cache_data
-def load_data(file_path:str):
-    df = pd.read_parquet(file_path)
-    return df
-
-def graph_housing(data, city):
-    data_format = pd.melt(
-                          data[["LIB_MOD","proportion_city","proportion_national"]].rename(columns={"proportion_city": city,
-                                                                                                    "proportion_national": "France entière"}),
-                          id_vars = ["LIB_MOD"], value_vars = [city,"France entière"]
-                          )
-    fig, ax = plt.subplots(1, figsize=(11, 6))
-    ax = sns.barplot(data = data_format, x="value", y ="LIB_MOD", hue="variable", palette="mako", orient='h')
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=True, offset=None, trim=True)
-    score_percent_city = round(data_format.query("variable == @city")["value"] * 100,1).astype(str) + "%"
-    score_percent_nat = round(data_format.query("variable == 'France entière'")["value"] * 100,1).astype(str) + "%"
-    ax.bar_label(ax.containers[0], labels = score_percent_city,fmt='%.f')
-    ax.bar_label(ax.containers[1], labels = score_percent_nat,fmt='%.f')
-
-    ax.set_ylabel(None)
-    ax.set_xlabel(None)
-    ax.set_facecolor('white')
-    ax.set(xticklabels=[])
-    ax.legend().set_title(None)
-
-    return fig
-
-def dvf_preproc(dvf_clean_df):
-
-    """
-    Returns a dataframe with real estate transactions for houses and apartments, cleaned of outliers and duplicates.
-    """
-    dvf_house_apt = dvf_clean_df.loc[
-        (dvf_clean_df["Type local"].isin(["Maison", "Appartement"])) &
-        (dvf_clean_df["Nature mutation"] == "Vente")
-        ].reset_index(drop=True)
-
-    # Excluding outliers
-    dvf_preproc_unique = dvf_house_apt.drop_duplicates(subset=["Date mutation","Valeur fonciere", "No voie", "Voie"])
-    lower_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.05)
-    upper_threshold = dvf_preproc_unique["Valeur fonc / surface habitable"].quantile(.95)
-    dvf_preproc_clean = dvf_preproc_unique.copy()
-    dvf_preproc_clean["Valeur fonc / surface habitable"] = dvf_preproc_clean["Valeur fonc / surface habitable"].clip(lower=lower_threshold, upper=upper_threshold)
-    dvf_preproc_no_outlier = dvf_preproc_clean[~dvf_preproc_clean["Valeur fonc / surface habitable"].isin([lower_threshold, upper_threshold])]
-
-    return dvf_preproc_no_outlier
-
-def dvf_per_city(dvf_preproc):
-
-    dvf_house_apt_avg = dvf_preproc.groupby(['CODGEO','Type local'], as_index = False)["Valeur fonc / surface habitable"].mean().sort_values(by=["CODGEO","Type local"]).reset_index(drop=True)
-
-    return dvf_house_apt_avg
-
-def data_meteo_national_avg(data_meteo_preproc_df):
-
-    data_nat = data_meteo_preproc_df.groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
-
-    return data_nat
-
-@st.cache_data
-def wheather_station_list(data_meteo_preproc_df):
-
-    stations_coord = data_meteo_preproc_df.query("numer_sta != 7661").loc[:,["codegeo","nom_epci","libgeo","numer_sta","latitude","longitude"]].drop_duplicates(subset=["numer_sta"]).sort_values(by=["libgeo"]).reset_index(drop=True)
-    stations_coord["coord"] = list(zip(stations_coord["latitude"], stations_coord["longitude"]))
-    return stations_coord
-
-@st.cache_data
-def pollution_station_list(data_pollution_df):
-
-    stations_coord = data_pollution_df.loc[:,["Zas","code site","nom site","coord"]]\
-        .drop_duplicates(subset=["code site"])\
-            .sort_values(by=["nom site"])\
-                .reset_index(drop=True)\
-                    .rename(columns={"code site":"numer_sta"})
-
-    return stations_coord
-
-def find_closest_station(station_df, coordinates: tuple):
-
-    closest_station = station_df.copy()
-    closest_station["distance"] = closest_station.apply(lambda x: geopy.distance.geodesic(x["coord"], coordinates).km, axis=1)
-
-    return closest_station[closest_station["distance"] == closest_station["distance"].min()].loc[:,"numer_sta"].values[0]
-
-
-def temp_by_season(data_meteo_city):
-    df = data_meteo_city.copy()
-    df["Saison"] = np.where(
-        df["date_clean"].dt.month.isin([3, 4, 5]),
-        "printemps",
-        np.where(
-            df["date_clean"].dt.month.isin([6, 7, 8]),
-            "été",
-            np.where(
-                df["date_clean"].dt.month.isin([9, 10, 11]),
-                "automne",
-                "hiver"
-        )))
-
-    df_grouped = df.groupby(["Saison"])["temperature_C"].mean()
-
-    return df_grouped
-
-@st.cache_data
-def data_meteo_national_avg(data_meteo_preproc_df):
-
-    data_nat = data_meteo_preproc_df.dropna(subset=["precipitations_3h","humidite_%","temperature_C"]).groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
-
-    return data_nat
-
-def pluvio_moyenne(data_preproc):
-    df = data_preproc.copy().reset_index()
-    df["month_name"] = df["date_clean"].dt.month.apply(lambda x : calendar.month_name[x])   #dt.month_name("fr_FR.utf8")
-    df["year_month"] = df["date_clean"].dt.to_period("M")
-    #sum of rain per month
-    df_sum_month = df.groupby(["year_month", "month_name"], as_index=False)["precipitations_3h"].sum()
-
-    #average of rain per month
-    df_sum_month["month"] = df_sum_month["year_month"].dt.month
-    df_avg_month = df_sum_month.groupby(["month_name","month"], as_index=False)["precipitations_3h"].mean().sort_values(by=["month"]).reset_index(drop=True)
-    return df_avg_month
-
-def graph_pluvio(data_pluvio, city):
-    data_format = pd.melt(data_pluvio.reset_index(), id_vars = ["month_name"], value_vars = [city,"Moy. villes françaises"])
-    fig, ax = plt.subplots(1, figsize=(14, 4))
-    ax = sns.barplot(data = data_format, x="month_name", y ="value", hue="variable", palette="mako")
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-    ax.legend().set_title(None)
-    ax.set_ylabel("mm")
-    ax.set_xlabel(None)
-    sns.set_style("darkgrid")
-    return fig
-
-def graph_poll(data_poll, city, reco_OMS):
-    data_format = pd.melt(data_poll.reset_index(), id_vars = ["date_clean"], value_vars = [city,"Moy. nationale", "Recommandation OMS"])
-    fig, ax = plt.subplots(1, figsize=(12, 4))
-    ax = sns.lineplot(data = data_format.query("variable != 'Recommandation OMS'"), x="date_clean", y ="value", hue="variable", palette="mako")
-    ax = sns.lineplot(data = data_format.query("variable == 'Recommandation OMS'"), x="date_clean", y ="value", color="red", linestyle='--')
-    sns.despine(fig=None, ax=None, top=True, right=True, left=True, bottom=False, offset=None, trim=False)
-    ax.legend().set_title(None)
-    ax.set_ylabel("µg/m3")
-    ax.set_xlabel(None)
-    ax.annotate("Seuil journalier recommandé par l'OMS", xy = (pd.to_datetime('2023-01-15'), reco_OMS), xytext=(pd.to_datetime('2023-01-04'), reco_OMS + 0.5), color='red')
-    return fig
-
-def replace_checkmark(data: pd.Series):
-     data_checkmark = data.replace(1,"✔️").replace(0,"❌")
-     return data_checkmark
-
-#################################### WELCOME PAGE #######################################################
-
+# Keep the Streamlit page config and UI layout; replace local helper definitions by imported functions.
 st.set_page_config(
     page_title="City_Dashboard",
     page_icon="🏙️",
@@ -173,35 +30,33 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-folder = "processed_data"
-
+# Title
 title_image, title_text = st.columns((1,4))
 with title_image:
-    image_france = Image.open('processed_data/logo-france-2.png')
+    image_france = Image.open(FILES["logo"])
     st.image(image_france, width=120)
 with title_text:
     st.markdown('# *Explorateur de villes :blue[françaises]*')
 
-
-folder = "processed_data"
-insee_data_file = os.path.join(folder,"2020_insee_data_population.parquet.gzip")
-insee_data_sum_stat = os.path.join(folder,"2020_insee_data_population_sum_stat.parquet.gzip")
-cityhall_elec_data_file = os.path.join(folder,"2020_gouv_data_city_hall_elections.parquet.gzip")
-pres_elec_data_file = os.path.join(folder,"2022_gouv_data_pres_elections.parquet.gzip")
-insee_city_name_id = os.path.join(folder,"cities_insee_id.parquet.gzip")
-insee_housing_const = os.path.join(folder,"2020_housing_constr_period.parquet.gzip")
-insee_hlm = os.path.join(folder,"2020_housing_hlm.parquet.gzip")
-insee_immigration = os.path.join(folder,"2020_housing_immigration.parquet.gzip")
-insee_nb_rooms = os.path.join(folder,"2020_housing_nb_rooms.parquet.gzip")
-insee_owner_share = os.path.join(folder,"2020_housing_owner_share.parquet.gzip")
-insee_housing_size = os.path.join(folder,"2020_housing_size.parquet.gzip")
-insee_housing_age = os.path.join(folder,"2020_housing_age.parquet.gzip")
-real_estate_2023 = os.path.join(folder,"2023_real_estate_mkt.parquet.gzip")
-wheather_data_2020_2023 = os.path.join(folder,"2020_2023_wheather.parquet.gzip")
-pollution_data_2023 = os.path.join(folder,"2023_pollution.parquet.gzip")
-local_tax_2022 = os.path.join(folder, "2022_local_taxes.parquet.gzip")
-rental_2022 = os.path.join(folder, "2022_rental_indices.parquet.gzip")
-schools = os.path.join(folder, "schools_data.parquet.gzip")
+# Use FILES constants
+insee_data_file = FILES["insee_data"]
+insee_data_sum_stat = FILES["insee_sum_stat"]
+cityhall_elec_data_file = FILES["cityhall"]
+pres_elec_data_file = FILES["presidential"]
+insee_city_name_id = FILES["cities_insee_id"]
+insee_housing_const = FILES["housing_const"]
+insee_hlm = FILES["housing_hlm"]
+insee_immigration = FILES["housing_immigration"]
+insee_nb_rooms = FILES["housing_nb_rooms"]
+insee_owner_share = FILES["housing_owner_share"]
+insee_housing_size = FILES["housing_size"]
+insee_housing_age = FILES["housing_age"]
+real_estate_2023 = FILES["real_estate_2023"]
+wheather_data_2020_2023 = FILES["weather"]
+pollution_data_2023 = FILES["pollution"]
+local_tax_2022 = FILES["taxes"]
+rental_2022 = FILES["rental"]
+schools = FILES["schools"]
 
 insee_city_name_df = load_data(insee_city_name_id)
 
@@ -607,21 +462,15 @@ if launch_button:
             st.markdown("""---""")
             st.subheader("Résultat aux élections municipales de 2020")
 
-            dict_color_pol = {"Extrême Gauche": '🔴',
-                "Gauche":'🟠',
-                "Divers":'🟢',
-                "Centre": '⚪️',
-                "Droite":'🔵',
-                "Extrême Droite": '⚫️'}
             pol3, pol4 = st.columns((1,8), gap='small')
             with pol3:
-                image = Image.open('processed_data/interpro_Maire.png')
+                image = Image.open(f'{FOLDER}/interpro_Maire.png')
                 st.image(image, width=140)
             with pol4:
                 st.markdown(f"**{elected_candidate_surname}** **{elected_candidate_name}**")
                 st.caption(f"Elu(e) au {election_tour_string} | **Score :** {elected_candidate_score * 100:,.1f} % | **Liste :** {elected_candidate_list}")
                 st.caption(f"**Parti ou mouvement associé :** {elected_candidate_party}" if elected_candidate_nucode != 'NC' else 'Sans étiquette')
-                st.caption(f"**Bloc :** {elected_candidate_color} {dict_color_pol[elected_candidate_color]}" if elected_candidate_color is not None else '')
+                st.caption(f"**Bloc :** {elected_candidate_color} {DICT_COLOR_POL[elected_candidate_color]}" if elected_candidate_color is not None else '')
 
 
             st.write("##")
