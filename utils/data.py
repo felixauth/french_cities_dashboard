@@ -5,10 +5,10 @@ import geopy.distance
 import streamlit as st
 
 @st.cache_data
-def load_data(file_path: str):
+def load_data(file_path: str)-> pd.DataFrame:
     return pd.read_parquet(file_path)
 
-def dvf_preproc(dvf_clean_df):
+def dvf_preproc(dvf_clean_df: pd.DataFrame) -> pd.DataFrame:
     dvf_house_apt = dvf_clean_df.loc[
         (dvf_clean_df["Type local"].isin(["Maison", "Appartement"])) &
         (dvf_clean_df["Nature mutation"] == "Vente")
@@ -23,18 +23,18 @@ def dvf_preproc(dvf_clean_df):
 
     return dvf_preproc_no_outlier
 
-def dvf_per_city(dvf_preproc_df):
+def dvf_per_city(dvf_preproc_df: pd.DataFrame) -> pd.DataFrame:
     dvf_house_apt_avg = dvf_preproc_df.groupby(['CODGEO','Type local'], as_index = False)["Valeur fonc / surface habitable"].mean().sort_values(by=["CODGEO","Type local"]).reset_index(drop=True)
     return dvf_house_apt_avg
 
 @st.cache_data
-def wheather_station_list(data_meteo_preproc_df):
+def wheather_station_list(data_meteo_preproc_df: pd.DataFrame) -> pd.DataFrame:
     stations_coord = data_meteo_preproc_df.query("numer_sta != 7661").loc[:,["codegeo","nom_epci","libgeo","numer_sta","latitude","longitude"]].drop_duplicates(subset=["numer_sta"]).sort_values(by=["libgeo"]).reset_index(drop=True)
     stations_coord["coord"] = list(zip(stations_coord["latitude"], stations_coord["longitude"]))
     return stations_coord
 
 @st.cache_data
-def pollution_station_list(data_pollution_df):
+def pollution_station_list(data_pollution_df: pd.DataFrame) -> pd.DataFrame:
     stations_coord = data_pollution_df.loc[:,["Zas","code site","nom site","coord"]]\
         .drop_duplicates(subset=["code site"])\
             .sort_values(by=["nom site"])\
@@ -42,12 +42,12 @@ def pollution_station_list(data_pollution_df):
                     .rename(columns={"code site":"numer_sta"})
     return stations_coord
 
-def find_closest_station(station_df, coordinates: tuple):
+def find_closest_station(station_df: pd.DataFrame, coordinates: tuple) -> int:
     closest_station = station_df.copy()
     closest_station["distance"] = closest_station.apply(lambda x: geopy.distance.geodesic(x["coord"], coordinates).km, axis=1)
     return closest_station[closest_station["distance"] == closest_station["distance"].min()].loc[:,"numer_sta"].values[0]
 
-def temp_by_season(data_meteo_city):
+def temp_by_season(data_meteo_city: pd.DataFrame) -> pd.Series:
     df = data_meteo_city.copy()
     df["Saison"] = np.where(
         df["date_clean"].dt.month.isin([3, 4, 5]),
@@ -65,11 +65,11 @@ def temp_by_season(data_meteo_city):
     return df_grouped
 
 @st.cache_data
-def data_meteo_national_avg(data_meteo_preproc_df):
+def data_meteo_national_avg(data_meteo_preproc_df: pd.DataFrame) -> pd.DataFrame:
     data_nat = data_meteo_preproc_df.dropna(subset=["precipitations_3h","humidite_%","temperature_C"]).groupby("date_clean")[["precipitations_3h","humidite_%","temperature_C"]].mean()
     return data_nat
 
-def pluvio_moyenne(data_preproc):
+def pluvio_moyenne(data_preproc: pd.DataFrame) -> pd.DataFrame:
     df = data_preproc.copy().reset_index()
     df["month_name"] = df["date_clean"].dt.month.apply(lambda x : calendar.month_name[x])
     df["year_month"] = df["date_clean"].dt.to_period("M")

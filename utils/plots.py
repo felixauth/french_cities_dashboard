@@ -2,7 +2,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
-def graph_housing(data, city):
+def graph_housing(data: pd.DataFrame, city: str) -> plt.Figure:
     data_format = pd.melt(
                           data[["LIB_MOD","proportion_city","proportion_national"]].rename(columns={"proportion_city": city,
                                                                                                     "proportion_national": "France entière"}),
@@ -26,7 +26,7 @@ def graph_housing(data, city):
     ax.legend().set_title(None)
     return fig
 
-def graph_pluvio(data_pluvio, city):
+def graph_pluvio(data_pluvio: pd.DataFrame, city: str) -> plt.Figure:
     data_format = pd.melt(data_pluvio.reset_index(), id_vars = ["month_name"], value_vars = [city,"Moy. villes françaises"])
     fig, ax = plt.subplots(1, figsize=(14, 4))
     ax = sns.barplot(data = data_format, x="month_name", y ="value", hue="variable", palette="mako")
@@ -37,7 +37,7 @@ def graph_pluvio(data_pluvio, city):
     sns.set_style("darkgrid")
     return fig
 
-def graph_poll(data_poll, city, reco_OMS):
+def graph_poll(data_poll: pd.DataFrame, city: str, reco_OMS: float) -> plt.Figure:
     data_format = pd.melt(data_poll.reset_index(), id_vars = ["date_clean"], value_vars = [city,"Moy. nationale", "Recommandation OMS"])
     fig, ax = plt.subplots(1, figsize=(12, 4))
     ax = sns.lineplot(data = data_format.query("variable != 'Recommandation OMS'"), x="date_clean", y ="value", hue="variable", palette="mako")
